@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Component Importer for KiCad</title>
+    <meta name="description" content="Open source Windows app for importing component ZIP libraries into KiCad projects.">
+    <link rel="icon" href="assets/app_icon.ico">
+    <style>
+      :root {
+        --bg: #f3f3f3;
+        --panel: #ffffff;
+        --panel-soft: #fafafa;
+        --text: #1f1f1f;
+        --muted: #5f6368;
+        --line: #d8d8d8;
+        --blue: #0067c0;
+        --blue-dark: #004c91;
+        --green: #107c10;
+        --shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        line-height: 1.55;
+      }
+
+      a {
+        color: var(--blue);
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(18px);
+      }
+
+      .nav {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+      }
+
+      .brand img {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 14px;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+        color: var(--muted);
+      }
+
+      .nav-links a:hover {
+        color: var(--blue);
+      }
+
+      .hero {
+        min-height: 620px;
+        display: grid;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(243, 243, 243, 0.98), rgba(243, 243, 243, 0.86)),
+          url("assets/app_icon.png") right -90px center / 620px no-repeat;
+      }
+
+      .hero-inner {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 84px 0 96px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--blue-dark);
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 18px;
+      }
+
+      .status-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 0;
+        font-size: clamp(42px, 7vw, 78px);
+        line-height: 1.03;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 650px;
+        margin: 24px 0 0;
+        color: var(--muted);
+        font-size: 20px;
+      }
+
+      .actions {
+        margin-top: 34px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        text-decoration: none;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--panel);
+      }
+
+      .button.primary {
+        border-color: var(--blue);
+        color: #ffffff;
+        background: var(--blue);
+      }
+
+      .button.primary:hover {
+        background: var(--blue-dark);
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      section {
+        padding: 72px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: 34px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 22px;
+      }
+
+      .steps {
+        display: grid;
+        gap: 12px;
+        margin-top: 28px;
+        counter-reset: steps;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        gap: 16px;
+        align-items: start;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+        counter-increment: steps;
+      }
+
+      .step::before {
+        content: counter(steps);
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        color: #ffffff;
+        background: var(--blue);
+        font-weight: 700;
+      }
+
+      .download-panel {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 22px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 26px;
+      }
+
+      code {
+        font-family: "Cascadia Mono", Consolas, monospace;
+        font-size: 0.95em;
+      }
+
+      footer {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 36px 0 48px;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        font-size: 14px;
+      }
+
+      @media (max-width: 760px) {
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 14px 0;
+        }
+
+        .nav-links {
+          flex-wrap: wrap;
+        }
+
+        .hero {
+          min-height: 560px;
+          background:
+            linear-gradient(0deg, rgba(243, 243, 243, 0.98), rgba(243, 243, 243, 0.9)),
+            url("assets/app_icon.png") center bottom -150px / 420px no-repeat;
+        }
+
+        .hero-inner {
+          padding: 54px 0 120px;
+        }
+
+        .lead {
+          font-size: 18px;
+        }
+
+        .grid,
+        .download-panel {
+          grid-template-columns: 1fr;
+        }
+
+        section {
+          padding: 52px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <nav class="nav" aria-label="Main navigation">
+        <div class="brand">
+          <img src="assets/app_icon.png" alt="">
+          <span>Component Importer for KiCad</span>
+        </div>
+        <div class="nav-links">
+          <a href="#download">Download</a>
+          <a href="#first-use">First use</a>
+          <a href="https://github.com/robertxdx/component-importer-for-kicad">GitHub</a>
+          <a href="https://buy.stripe.com/cNieVeg1c7xbalm0CEdnW00">Support</a>
+        </div>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow"><span class="status-dot"></span> Free and open source Windows app</div>
+        <h1>Component Importer for KiCad</h1>
+        <p class="lead">
+          Import downloaded component ZIP libraries into project-local KiCad libraries, with symbols,
+          footprints, 3D models, metadata, and automatic footprint links kept together.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe">Download for Windows</a>
+          <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad">View source</a>
+        </div>
+      </div>
+    </section>
+
+    <main>
+      <section id="download">
+        <div class="download-panel">
+          <div>
+            <h2>One installer for non-technical users</h2>
+            <p class="muted">
+              Download the latest release, run the installer, configure your KiCad project folder,
+              and import component ZIPs from your downloads folder.
+            </p>
+          </div>
+          <a class="button primary" href="https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe">Download installer</a>
+        </div>
+      </section>
+
+      <section>
+        <h2>What it handles</h2>
+        <p class="muted">The app is focused on keeping third-party CAD downloads tidy inside each KiCad project.</p>
+        <div class="grid">
+          <article class="card">
+            <h3>Symbols and footprints</h3>
+            <p class="muted">Merges imported symbols and footprints into configured project libraries.</p>
+          </article>
+          <article class="card">
+            <h3>3D models and metadata</h3>
+            <p class="muted">Copies models, datasheets, source ZIPs, and import metadata into organized folders.</p>
+          </article>
+          <article class="card">
+            <h3>Automatic imports</h3>
+            <p class="muted">Can watch a downloads folder and import new component ZIP files when they arrive.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="first-use">
+        <h2>First use with KiCad 10</h2>
+        <p class="muted">
+          KiCad 10 can cache project library tables while a project is open, so first setup works best before KiCad loads the project.
+        </p>
+        <div class="steps">
+          <div class="step">
+            <div>
+              <h3>Create or choose your KiCad project</h3>
+              <p class="muted">The project folder should contain a <code>.kicad_pro</code> file.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3>Close KiCad fully</h3>
+              <p class="muted">Close the schematic editor, PCB editor, and KiCad project window before the first setup.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3>Configure the importer</h3>
+              <p class="muted">Select the KiCad project root, name your components library, select your downloads folder, and save.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div>
+              <h3>Open KiCad and import</h3>
+              <p class="muted">After the library exists and KiCad has loaded it, new imports go into the same library.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Open source</h2>
+        <p class="muted">
+          The project is available under the MIT License. Contributions, issues, and improvement ideas are welcome on GitHub.
+        </p>
+        <div class="actions">
+          <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad">Repository</a>
+          <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad/issues">Report an issue</a>
+          <a class="button" href="https://buy.stripe.com/cNieVeg1c7xbalm0CEdnW00">Support the app</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      This independent project is not affiliated with, endorsed by, or maintained by the KiCad project.
+    </footer>
+  </body>
+</html>
