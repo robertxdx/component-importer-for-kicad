@@ -6,10 +6,10 @@ from PyQt6.QtCore import pyqtSignal
 from pathlib import Path
 
 # Import component ZIP importer
-from cad_zip_importer import import_cad_zip
+from component_importer.cad_zip_importer import import_cad_zip
 
 # Import import validator
-from import_validator import validate_imported_part
+from component_importer.import_validator import validate_imported_part
 
 
 # Return one failed validation check for a category, if any

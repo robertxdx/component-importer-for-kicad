@@ -12,8 +12,8 @@ from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtCore import pyqtSignal
 
 # Import online search helpers
-from online_component_search import build_component_search_results
-from online_component_search import open_search_result
+from component_importer.online_component_search import build_component_search_results
+from component_importer.online_component_search import open_search_result
 
 
 # Search tab

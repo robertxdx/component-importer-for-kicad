@@ -25,30 +25,30 @@ from PyQt6.QtGui import QIcon
 from datetime import datetime
 
 # Import config helpers
-from gui_config_manager import load_gui_config
-from gui_config_manager import save_gui_config
-from gui_config_manager import infer_part_name_from_zip
-from gui_config_manager import RECOMMENDED_STABLE_ZIP_DELAY_SECONDS
-from gui_config_manager import validate_gui_config
+from component_importer.gui_config_manager import load_gui_config
+from component_importer.gui_config_manager import save_gui_config
+from component_importer.gui_config_manager import infer_part_name_from_zip
+from component_importer.gui_config_manager import RECOMMENDED_STABLE_ZIP_DELAY_SECONDS
+from component_importer.gui_config_manager import validate_gui_config
 
 # Import app path helpers
-from app_paths import APP_NAME
-from app_paths import resource_path
+from component_importer.app_paths import APP_NAME
+from component_importer.app_paths import resource_path
 
 # Import library initializer
-from project_library_initializer import initialize_project_libraries
+from component_importer.project_library_initializer import initialize_project_libraries
 
 # Import tabs
-from gui_config_tab import ConfigTab
-from gui_search_tab import SearchTab
-from gui_import_tab import ImportTab
-from gui_how_to_use_tab import HowToUseTab
+from component_importer.gui_config_tab import ConfigTab
+from component_importer.gui_search_tab import SearchTab
+from component_importer.gui_import_tab import ImportTab
+from component_importer.gui_how_to_use_tab import HowToUseTab
 
 # Import worker classes
-from gui_import_worker import ImportComponentWorker
+from component_importer.gui_import_worker import ImportComponentWorker
 
 # Import folder watcher
-from gui_scan_watcher import ZipFolderWatcher
+from component_importer.gui_scan_watcher import ZipFolderWatcher
 
 
 # Main GUI window

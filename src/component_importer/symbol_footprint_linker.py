@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 
 # Import make_library_nickname so the footprint library name matches fp-lib-table
-from library_table_updater import make_library_nickname
+from component_importer.library_table_updater import make_library_nickname
 
 
 # Check if a quote character is escaped

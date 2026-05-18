@@ -2,8 +2,8 @@
 from pathlib import Path
 
 # Import project library helpers
-from project_library import create_project_library_structure
-from library_table_updater import update_kicad_library_tables
+from component_importer.project_library import create_project_library_structure
+from component_importer.library_table_updater import update_kicad_library_tables
 
 
 # Ensure the configured project-local libraries exist and are registered

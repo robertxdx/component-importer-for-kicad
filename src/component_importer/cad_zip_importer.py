@@ -14,28 +14,28 @@ import json
 import shutil
 
 # Import our asset type enum
-from models import AssetType
+from component_importer.models import AssetType
 
 # Import function that creates the local KiCad library structure
-from project_library import create_project_library_structure
+from component_importer.project_library import create_project_library_structure
 
 # Import function that scans ZIP contents
-from zip_scanner import scan_cad_zip
+from component_importer.zip_scanner import scan_cad_zip
 
 # Import function that fixes 3D model paths inside imported footprints
-from footprint_3d_fixer import fix_3d_paths_for_imported_footprints
+from component_importer.footprint_3d_fixer import fix_3d_paths_for_imported_footprints
 
 # Import function that updates KiCad project library tables
-from library_table_updater import update_kicad_library_tables
+from component_importer.library_table_updater import update_kicad_library_tables
 
 # Import function that links symbols to imported footprint options
-from symbol_footprint_linker import link_symbol_library_to_footprints
+from component_importer.symbol_footprint_linker import link_symbol_library_to_footprints
 
 # Import symbol library merge helper
-from symbol_library_manager import merge_symbol_library_content_into_target
+from component_importer.symbol_library_manager import merge_symbol_library_content_into_target
 
 # Import backup helpers
-from backup_helper import get_backup_timestamp, backup_file_if_exists
+from component_importer.backup_helper import get_backup_timestamp, backup_file_if_exists
 
 
 # Make a string safe to use as a filename on Windows

@@ -48,7 +48,7 @@ https://robertxdx.github.io/component-importer-for-kicad/
 6. Upload the installer:
 
 ```text
-D:\Cloud\Python_projects\component_importer\release_builds\20260518_205706\KiCadComponentImporter_Setup.exe
+D:\Cloud\Python_projects\component_importer\release_builds\20260518_213449\KiCadComponentImporter_Setup.exe
 ```
 
 7. Paste the release notes below.

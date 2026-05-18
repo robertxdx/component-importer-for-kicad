@@ -16,7 +16,7 @@ from PyQt6.QtCore import pyqtSignal
 from pathlib import Path
 
 # Import part name inference
-from gui_config_manager import infer_part_name_from_zip
+from component_importer.gui_config_manager import infer_part_name_from_zip
 
 
 # Import tab

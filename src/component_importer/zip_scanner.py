@@ -6,7 +6,7 @@ from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 
 # Import our shared data model and asset type enum
-from models import CadAsset, AssetType
+from component_importer.models import CadAsset, AssetType
 
 
 # Detect what kind of CAD asset a file is based on its extension

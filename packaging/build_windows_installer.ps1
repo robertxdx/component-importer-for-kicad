@@ -12,8 +12,11 @@ $BuildDir = Join-Path $TempRoot "build"
 $SpecDir = Join-Path $FinalArtifactRoot "spec"
 $SourceDir = Join-Path $DistDir $AppName
 $InnoScript = Join-Path $PSScriptRoot "KiCadComponentImporter.iss"
-$GuiAssetsDir = Join-Path $Root "gui_assets"
+$SrcRoot = Join-Path $Root "src"
+$PackageDir = Join-Path $SrcRoot "component_importer"
+$GuiAssetsDir = Join-Path $PackageDir "gui_assets"
 $AppIconPath = Join-Path $GuiAssetsDir "app_icon.ico"
+$EntryPoint = Join-Path $PackageDir "gui_main.pyw"
 
 if (-not (Test-Path -LiteralPath $InnoCompiler)) {
     throw "Inno Setup compiler not found: $InnoCompiler"
@@ -34,9 +37,10 @@ try {
         --distpath $DistDir `
         --workpath $BuildDir `
         --specpath $SpecDir `
+        --paths $SrcRoot `
         --icon $AppIconPath `
         --add-data "$GuiAssetsDir;gui_assets" `
-        gui_main.pyw
+        $EntryPoint
 
     if (-not (Test-Path -LiteralPath (Join-Path $SourceDir "$AppName.exe"))) {
         throw "PyInstaller build did not create $AppName.exe"

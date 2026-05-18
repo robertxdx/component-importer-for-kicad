@@ -17,7 +17,7 @@ import json
 import re
 
 # Import app path helper
-from app_paths import gui_config_file_path
+from component_importer.app_paths import gui_config_file_path
 
 
 # Default config file

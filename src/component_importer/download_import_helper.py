@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 # Import the main CAD ZIP importer
-from cad_zip_importer import import_cad_zip
+from component_importer.cad_zip_importer import import_cad_zip
 
 
 # Get the default Windows Downloads folder for the current user

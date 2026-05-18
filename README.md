@@ -60,13 +60,13 @@ Requirements:
 Install Python dependencies:
 
 ```powershell
-python -m pip install -r requirements.txt
+python -m pip install -e ".[build]"
 ```
 
 Run the app from source:
 
 ```powershell
-python gui_main.py
+python -m component_importer.gui_main
 ```
 
 Build the Windows installer:

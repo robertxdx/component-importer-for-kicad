@@ -32,6 +32,11 @@ def resource_path(relative_path: str) -> Path:
     return Path(__file__).resolve().parent / relative_path
 
 
+# Get the repository root when running from source
+def source_root_dir() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
 # Get a per-user writable app data folder
 def user_data_dir() -> Path:
     # Prefer the normal Windows per-user local app data folder
@@ -50,5 +55,5 @@ def gui_config_file_path() -> Path:
     if is_frozen_app():
         return user_data_dir() / "gui_config.json"
 
-    # Source runs keep the development config beside the scripts
-    return Path(__file__).with_name("gui_config.json")
+    # Source runs keep the development config at the repository root
+    return source_root_dir() / "gui_config.json"

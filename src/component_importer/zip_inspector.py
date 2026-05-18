@@ -9,10 +9,10 @@ from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 
 # Import detect_asset_type to reuse our existing CAD asset detection logic
-from zip_scanner import detect_asset_type
+from component_importer.zip_scanner import detect_asset_type
 
 # Import AssetType so we can compare detected file types
-from models import AssetType
+from component_importer.models import AssetType
 
 
 # Inspect all files inside a ZIP file

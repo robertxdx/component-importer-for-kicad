@@ -1,5 +1,5 @@
 # Import helper to resolve assets in source and packaged runs
-from app_paths import resource_path
+from component_importer.app_paths import resource_path
 
 
 # Accent color used across the GUI

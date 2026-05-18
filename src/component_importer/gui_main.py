@@ -5,17 +5,17 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 # Import app path helpers
-from app_paths import APP_NAME
-from app_paths import resource_path
+from component_importer.app_paths import APP_NAME
+from component_importer.app_paths import resource_path
 
 # Import icon class
 from PyQt6.QtGui import QIcon
 
 # Import main window
-from gui_main_window import MainWindow
+from component_importer.gui_main_window import MainWindow
 
 # Import application stylesheet
-from gui_style import build_app_stylesheet
+from component_importer.gui_style import build_app_stylesheet
 
 
 # Run a quick non-GUI check for packaged smoke tests
@@ -24,7 +24,7 @@ def run_self_test() -> None:
     build_app_stylesheet()
 
     # Import window class to verify GUI modules can load
-    from gui_main_window import MainWindow  # noqa: F401
+    from component_importer.gui_main_window import MainWindow  # noqa: F401
 
 
 # Main entry point

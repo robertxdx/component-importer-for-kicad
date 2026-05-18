@@ -14,9 +14,9 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import pyqtSignal
 
 # Import config helpers
-from gui_config_manager import GuiConfig
-from gui_config_manager import save_gui_config
-from gui_config_manager import validate_gui_config
+from component_importer.gui_config_manager import GuiConfig
+from component_importer.gui_config_manager import save_gui_config
+from component_importer.gui_config_manager import validate_gui_config
 
 
 # Configuration tab

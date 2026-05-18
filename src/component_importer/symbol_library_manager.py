@@ -2,7 +2,7 @@
 from pathlib import Path
 
 # Import parser helpers from the existing symbol footprint linker
-from symbol_footprint_linker import find_symbol_blocks, remove_blocks_from_text
+from component_importer.symbol_footprint_linker import find_symbol_blocks, remove_blocks_from_text
 
 
 # Create an empty KiCad symbol library if needed

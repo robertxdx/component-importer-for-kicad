@@ -8,13 +8,13 @@ import fnmatch
 import re
 
 # Import helper used to make library names match KiCad table nicknames
-from library_table_updater import make_library_nickname
+from component_importer.library_table_updater import make_library_nickname
 
 # Import helper used to read 3D model paths from footprint files
-from footprint_3d_fixer import find_3d_models_in_footprint
+from component_importer.footprint_3d_fixer import find_3d_models_in_footprint
 
 # Import helper used to find symbol blocks inside .kicad_sym files
-from symbol_footprint_linker import find_symbol_blocks
+from component_importer.symbol_footprint_linker import find_symbol_blocks
 
 
 # Add one validation check to the result dictionary

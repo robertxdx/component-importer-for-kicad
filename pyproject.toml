@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "component-importer-for-kicad"
+version = "0.1.0"
+description = "Open source Windows app for importing downloaded component ZIP libraries into KiCad projects."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+authors = [
+  { name = "RTR Tech Labs" }
+]
+dependencies = [
+  "PyQt6"
+]
+
+[project.optional-dependencies]
+build = [
+  "pyinstaller"
+]
+
+[project.scripts]
+component-importer-for-kicad = "component_importer.gui_main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+component_importer = ["gui_assets/*"]
