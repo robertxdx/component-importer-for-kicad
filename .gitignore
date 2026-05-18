@@ -24,6 +24,7 @@ test_kicad_project/
 
 gui_config.json
 *.log
+*.bat
 
 .DS_Store
 Thumbs.db
