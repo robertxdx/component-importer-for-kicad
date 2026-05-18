@@ -74,9 +74,3 @@ Use `KiCadComponentImporter_Setup.exe` from the release assets.
 ### First Use
 
 For KiCad 10, configure and save the importer before opening KiCad with the target project. KiCad can cache newly created project libraries while a project is already open.
-
-### Verification
-
-```text
-SHA256: EE90CA7A66360E281C4E621D80DCB6B56E7D7E5F77A542A979303A43C3337250
-```

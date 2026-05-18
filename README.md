@@ -6,10 +6,6 @@ An open source Windows app for importing downloaded component ZIP libraries into
   <img src="docs/assets/importer.png" alt="Component Importer for KiCad configuration tab" width="900">
 </p>
 
-<p align="center">
-  <img src="docs/assets/app_icon.png" alt="App icon" width="72">
-</p>
-
 [Download the latest Windows installer](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
 
 Support the project: [Buy me a coffee](https://buy.stripe.com/cNieVeg1c7xbalm0CEdnW00)
@@ -35,12 +31,6 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 For normal users, use the installer from the latest GitHub release:
 
 [Download KiCadComponentImporter_Setup.exe](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
-
-The first public installer hash is:
-
-```text
-SHA256: EE90CA7A66360E281C4E621D80DCB6B56E7D7E5F77A542A979303A43C3337250
-```
 
 ## First Use With KiCad 10
 
