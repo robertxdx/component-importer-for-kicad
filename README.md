@@ -28,7 +28,7 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 
 ## Download
 
-For normal users, use the installer from the latest GitHub release:
+Here is the installer:
 
 [Download KiCadComponentImporter_Setup.exe](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
 
