@@ -6,8 +6,6 @@ An open source desktop app for importing downloaded component ZIP libraries into
   <img src="docs/assets/importer.png" alt="Component Importer for KiCad configuration tab" width="900">
 </p>
 
-[Download the latest Windows installer](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
-
 Linux support is available for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions. See [Linux support notes](docs/LINUX.md).
 
 See the [installation guide](docs/INSTALL.md) for Windows and Linux setup steps.
