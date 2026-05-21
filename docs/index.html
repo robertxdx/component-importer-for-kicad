@@ -251,6 +251,24 @@
         padding: 26px;
       }
 
+      .download-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .download-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 24px;
+      }
+
+      .download-card .actions {
+        margin-top: 22px;
+      }
+
       code {
         font-family: "Cascadia Mono", Consolas, monospace;
         font-size: 0.95em;
@@ -292,6 +310,7 @@
         }
 
         .grid,
+        .download-grid,
         .download-panel {
           grid-template-columns: 1fr;
         }
@@ -411,6 +430,37 @@
           <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad">Repository</a>
           <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad/issues">Report an issue</a>
           <a class="button" href="https://buy.stripe.com/cNieVeg1c7xbalm0CEdnW00">Support the app</a>
+        </div>
+      </section>
+
+      <section id="downloads">
+        <h2>Downloads and install guides</h2>
+        <p class="muted">
+          Use the latest release assets for packaged builds, or follow the install guide to run from source.
+        </p>
+        <div class="download-grid">
+          <article class="download-card">
+            <h3>Windows</h3>
+            <p class="muted">
+              Download the installer, then launch the app from the Start menu.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe">Download installer</a>
+              <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad/releases/latest">Latest release</a>
+              <a class="button" href="INSTALL.md#windows">Install guide</a>
+            </div>
+          </article>
+          <article class="download-card">
+            <h3>Linux</h3>
+            <p class="muted">
+              Use the Linux bundle on Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter-linux-x86_64.tar.gz">Download bundle</a>
+              <a class="button" href="https://github.com/robertxdx/component-importer-for-kicad/releases/latest">Latest release</a>
+              <a class="button" href="INSTALL.md#linux-bundle">Install guide</a>
+            </div>
+          </article>
         </div>
       </section>
     </main>
