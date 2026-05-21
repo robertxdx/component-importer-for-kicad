@@ -32,7 +32,13 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 
 Windows installer:
 
-[Download KiCadComponentImporter_Setup.exe](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
+[KiCadComponentImporter_Setup.exe](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
+
+Linux installer:
+
+[KiCadComponentImporter-linux-x86_64.tar.gz](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter-linux-x86_64.tar.gz)
+
+All release assets are available on the [latest release page](https://github.com/robertxdx/component-importer-for-kicad/releases/latest).
 
 Linux builds can be created from source on a Linux machine using the packaging command below. See the [installation guide](docs/INSTALL.md) and [Linux support notes](docs/LINUX.md) for Ubuntu, Zorin OS, and Pop!_OS testing guidance.
 
