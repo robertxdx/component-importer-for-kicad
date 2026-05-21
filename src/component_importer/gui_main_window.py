@@ -33,7 +33,7 @@ from component_importer.gui_config_manager import validate_gui_config
 
 # Import app path helpers
 from component_importer.app_paths import APP_NAME
-from component_importer.app_paths import resource_path
+from component_importer.app_paths import runtime_icon_path
 
 # Import library initializer
 from component_importer.project_library_initializer import initialize_project_libraries
@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
 
         # Set application icon
-        self.app_icon = QIcon(str(resource_path("gui_assets/app_icon.ico")))
+        self.app_icon = QIcon(str(runtime_icon_path()))
         self.setWindowIcon(self.app_icon)
 
         # Set size
@@ -181,6 +181,11 @@ class MainWindow(QMainWindow):
 
     # Build tray icon
     def build_tray_icon(self) -> None:
+        self.tray_icon = None
+
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+
         # Create tray icon
         self.tray_icon = QSystemTrayIcon(self.app_icon, self)
 
@@ -530,17 +535,19 @@ class MainWindow(QMainWindow):
 
     # Hide window to tray
     def hide_to_tray(self) -> None:
+        if self.tray_icon is None or not self.tray_icon.isVisible():
+            return
+
         # Hide window
         self.hide()
 
         # Show tray message
-        if self.tray_icon.isVisible():
-            self.tray_icon.showMessage(
-                APP_NAME,
-                "The app is still running in the background.",
-                QSystemTrayIcon.MessageIcon.Information,
-                3000,
-            )
+        self.tray_icon.showMessage(
+            APP_NAME,
+            "The app is still running in the background.",
+            QSystemTrayIcon.MessageIcon.Information,
+            3000,
+        )
 
     # Show window from tray
     def show_from_tray(self) -> None:
@@ -564,7 +571,8 @@ class MainWindow(QMainWindow):
         self.watcher.stop()
 
         # Hide tray icon
-        self.tray_icon.hide()
+        if self.tray_icon is not None:
+            self.tray_icon.hide()
 
         # Quit app
         QApplication.instance().quit()

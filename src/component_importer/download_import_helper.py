@@ -1,20 +1,19 @@
 # Import Path for filesystem operations
 from pathlib import Path
 
-# Import Optional for optional path typing
-from typing import Optional
-
 # Import the main CAD ZIP importer
 from component_importer.cad_zip_importer import import_cad_zip
 
+# Import platform-aware default folder helper
+from component_importer.app_paths import default_downloads_dir
 
-# Get the default Windows Downloads folder for the current user
+# Import case-insensitive ZIP discovery helper
+from component_importer.file_discovery import iter_zip_files
+
+
+# Get the default Downloads folder for the current user
 def get_default_downloads_folder() -> Path:
-    # Build path like C:\Users\YourUser\Downloads
-    downloads_folder = Path.home() / "Downloads"
-
-    # Return the detected Downloads folder
-    return downloads_folder
+    return default_downloads_dir()
 
 
 # List ZIP files inside a folder, newest first
@@ -29,8 +28,8 @@ def list_zip_files(
     if not folder.exists():
         raise FileNotFoundError(f"Folder not found: {folder.resolve()}")
 
-    # Find all .zip files inside the folder
-    zip_files = list(folder.glob("*.zip"))
+    # Find all ZIP files inside the folder
+    zip_files = iter_zip_files(folder)
 
     # Sort ZIP files by modification time, newest first
     zip_files = sorted(

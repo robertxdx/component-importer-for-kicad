@@ -45,14 +45,20 @@ https://robertxdx.github.io/component-importer-for-kicad/
 3. Click Draft a new release.
 4. Create tag `v0.1.0`.
 5. Use release title `v0.1.0`.
-6. Upload the installer:
+6. Upload the Windows installer:
 
 ```text
 D:\Cloud\Python_projects\component_importer\release_builds\20260518_213449\KiCadComponentImporter_Setup.exe
 ```
 
-7. Paste the release notes below.
-8. Publish the release.
+7. If publishing a Linux build, also upload the Linux archive:
+
+```text
+release_builds\<timestamp>\KiCadComponentImporter-linux-x86_64.tar.gz
+```
+
+8. Paste the release notes below.
+9. Publish the release.
 
 ## Release Notes For v0.1.0
 
@@ -60,11 +66,13 @@ First public release of Component Importer for KiCad.
 
 ### Download
 
-Use `KiCadComponentImporter_Setup.exe` from the release assets.
+Use `KiCadComponentImporter_Setup.exe` from the release assets on Windows.
+Linux users can use `KiCadComponentImporter-linux-x86_64.tar.gz` when provided.
 
 ### Included
 
 - Windows installer.
+- Linux bundle support for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions.
 - Component ZIP import into project-local KiCad libraries.
 - Symbol, footprint, 3D model, datasheet, metadata, and source ZIP handling.
 - Automatic footprint link updates for imported symbols.

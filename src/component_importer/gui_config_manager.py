@@ -17,6 +17,7 @@ import json
 import re
 
 # Import app path helper
+from component_importer.app_paths import default_downloads_dir
 from component_importer.app_paths import gui_config_file_path
 
 
@@ -43,7 +44,7 @@ class GuiConfig:
     footprint_library_name: str = "Project_Components"
 
     # Folder watched for newly downloaded ZIP files
-    downloads_folder: str = str(Path.home() / "Downloads")
+    downloads_folder: str = str(default_downloads_dir())
 
     # Create backups before overwriting files
     create_backups: bool = True

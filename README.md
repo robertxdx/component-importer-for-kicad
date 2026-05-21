@@ -1,12 +1,16 @@
 # Component Importer for KiCad
 
-An open source Windows app for importing downloaded component ZIP libraries into KiCad projects.
+An open source desktop app for importing downloaded component ZIP libraries into KiCad projects.
 
 <p align="center">
   <img src="docs/assets/importer.png" alt="Component Importer for KiCad configuration tab" width="900">
 </p>
 
 [Download the latest Windows installer](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
+
+Linux support is available for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions. See [Linux support notes](docs/LINUX.md).
+
+See the [installation guide](docs/INSTALL.md) for Windows and Linux setup steps.
 
 Support the project: [Buy me a coffee](https://buy.stripe.com/cNieVeg1c7xbalm0CEdnW00)
 
@@ -28,9 +32,11 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 
 ## Download
 
-Here is the installer:
+Windows installer:
 
 [Download KiCadComponentImporter_Setup.exe](https://github.com/robertxdx/component-importer-for-kicad/releases/latest/download/KiCadComponentImporter_Setup.exe)
+
+Linux builds can be created from source on a Linux machine using the packaging command below. See the [installation guide](docs/INSTALL.md) and [Linux support notes](docs/LINUX.md) for Ubuntu, Zorin OS, and Pop!_OS testing guidance.
 
 ## First Use With KiCad 10
 
@@ -51,11 +57,11 @@ After the project library already exists and KiCad has loaded it, importing new 
 
 Requirements:
 
-- Windows
-- Python 3.14 or newer
+- Windows or Linux
+- Python 3.10 or newer
 - PyQt6
-- PyInstaller
-- Inno Setup 6, only needed to build the installer
+- PyInstaller, only needed to build release bundles
+- Inno Setup 6, only needed to build the Windows installer
 
 Install Python dependencies:
 
@@ -76,6 +82,15 @@ powershell -ExecutionPolicy Bypass -File packaging\build_windows_installer.ps1
 ```
 
 The installer is written to `release_builds/<timestamp>/KiCadComponentImporter_Setup.exe`.
+
+Build a Linux bundle on Linux:
+
+```bash
+bash packaging/build_linux_bundle.sh
+```
+
+The Linux archive is written to `release_builds/<timestamp>/KiCadComponentImporter-linux-<arch>.tar.gz`.
+After unpacking it, run `./run.sh`, or run `./install_desktop_entry.sh` to add a user-level launcher.
 
 ## Notes
 

@@ -10,7 +10,7 @@ import shutil
 
 # Create a timestamp string for backup folder names
 def get_backup_timestamp() -> str:
-    # Return timestamp safe for Windows filenames
+    # Return timestamp safe for filenames across supported platforms
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 

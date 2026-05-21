@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "component-importer-for-kicad"
 version = "0.1.0"
-description = "Open source Windows app for importing downloaded component ZIP libraries into KiCad projects."
+description = "Open source desktop app for importing downloaded component ZIP libraries into KiCad projects."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [
   { name = "RTR Tech Labs" }

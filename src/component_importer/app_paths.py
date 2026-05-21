@@ -1,4 +1,4 @@
-# Import os for Windows app data environment variables
+# Import os for platform app data environment variables
 import os
 
 # Import sys to detect PyInstaller bundles
@@ -11,8 +11,23 @@ from pathlib import Path
 # User-visible application name
 APP_NAME = "KiCad Component Importer"
 
-# Folder name used in AppData and installer paths
+# Folder name used in per-user config and installer paths
 APP_DIR_NAME = "KiCadComponentImporter"
+
+
+# Return True when running on Windows
+def is_windows() -> bool:
+    return sys.platform.startswith("win")
+
+
+# Return True when running on Darwin-based systems
+def is_darwin() -> bool:
+    return sys.platform == "darwin"
+
+
+# Return True when running on Linux
+def is_linux() -> bool:
+    return sys.platform.startswith("linux")
 
 
 # Return True when running from a PyInstaller-built executable
@@ -39,14 +54,75 @@ def source_root_dir() -> Path:
 
 # Get a per-user writable app data folder
 def user_data_dir() -> Path:
-    # Prefer the normal Windows per-user local app data folder
-    local_app_data = os.environ.get("LOCALAPPDATA")
+    if is_windows():
+        # Prefer the normal Windows per-user local app data folder
+        local_app_data = os.environ.get("LOCALAPPDATA")
 
-    if local_app_data:
-        return Path(local_app_data) / APP_DIR_NAME
+        if local_app_data:
+            return Path(local_app_data) / APP_DIR_NAME
 
-    # Fallback for unusual environments
-    return Path.home() / f".{APP_DIR_NAME}"
+        return Path.home() / "AppData" / "Local" / APP_DIR_NAME
+
+    if is_darwin():
+        return Path.home() / "Library" / "Application Support" / APP_DIR_NAME
+
+    # Linux and other Unix-like systems follow XDG_CONFIG_HOME when available
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
+
+    if xdg_config_home:
+        return Path(xdg_config_home) / APP_DIR_NAME
+
+    return Path.home() / ".config" / APP_DIR_NAME
+
+
+# Parse the XDG user dirs file for a configured Downloads folder
+def xdg_downloads_dir() -> Path | None:
+    user_dirs_file = Path.home() / ".config" / "user-dirs.dirs"
+
+    if not user_dirs_file.exists():
+        return None
+
+    for line in user_dirs_file.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+
+        if not line.startswith("XDG_DOWNLOAD_DIR="):
+            continue
+
+        value = line.split("=", 1)[1].strip().strip('"')
+        value = value.replace("$HOME", str(Path.home()))
+
+        if value:
+            return Path(value)
+
+    return None
+
+
+# Get the default downloads folder for the current platform
+def default_downloads_dir() -> Path:
+    if is_linux():
+        downloads_dir = xdg_downloads_dir()
+
+        if downloads_dir is not None:
+            return downloads_dir
+
+    return Path.home() / "Downloads"
+
+
+# Get a runtime icon path that Qt can load on all supported platforms
+def runtime_icon_path() -> Path:
+    preferred_icons = [
+        "gui_assets/app_icon.png",
+        "gui_assets/app_icon.ico",
+        "gui_assets/app_icon.svg",
+    ]
+
+    for relative_path in preferred_icons:
+        icon_path = resource_path(relative_path)
+
+        if icon_path.exists():
+            return icon_path
+
+    return resource_path(preferred_icons[0])
 
 
 # Get the GUI config file path

@@ -3,10 +3,11 @@ import sys
 
 # Import QApplication
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QSystemTrayIcon
 
 # Import app path helpers
 from component_importer.app_paths import APP_NAME
-from component_importer.app_paths import resource_path
+from component_importer.app_paths import runtime_icon_path
 
 # Import icon class
 from PyQt6.QtGui import QIcon
@@ -37,13 +38,13 @@ def main() -> None:
     # Create app
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
-    app.setWindowIcon(QIcon(str(resource_path("gui_assets/app_icon.ico"))))
+    app.setWindowIcon(QIcon(str(runtime_icon_path())))
 
     # Apply clean white app theme
     app.setStyleSheet(build_app_stylesheet())
 
-    # Keep app alive when window is hidden to tray
-    app.setQuitOnLastWindowClosed(False)
+    # Keep app alive when window is hidden to tray, when the platform has a tray
+    app.setQuitOnLastWindowClosed(not QSystemTrayIcon.isSystemTrayAvailable())
 
     # Create window
     window = MainWindow()

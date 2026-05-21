@@ -38,9 +38,9 @@ from component_importer.symbol_library_manager import merge_symbol_library_conte
 from component_importer.backup_helper import get_backup_timestamp, backup_file_if_exists
 
 
-# Make a string safe to use as a filename on Windows
+# Make a string safe to use as a filename across supported platforms
 def safe_filename(name: str) -> str:
-    # Characters that Windows does not allow in filenames
+    # Use the strict Windows set so names also travel cleanly between platforms
     invalid_chars = '<>:"/\\|?*'
 
     # Replace each invalid character with an underscore

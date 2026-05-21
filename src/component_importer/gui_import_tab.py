@@ -18,6 +18,9 @@ from pathlib import Path
 # Import part name inference
 from component_importer.gui_config_manager import infer_part_name_from_zip
 
+# Import case-insensitive ZIP discovery helper
+from component_importer.file_discovery import iter_zip_files
+
 
 # Import tab
 class ImportTab(QWidget):
@@ -130,7 +133,7 @@ class ImportTab(QWidget):
 
         # Get latest ZIP files
         self.zip_files = sorted(
-            folder.glob("*.zip"),
+            iter_zip_files(folder),
             key=lambda path: path.stat().st_mtime,
             reverse=True,
         )[:20]

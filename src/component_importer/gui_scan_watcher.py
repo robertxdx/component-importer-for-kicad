@@ -10,6 +10,9 @@ from pathlib import Path
 # Import time for stability delay checks
 import time
 
+# Import case-insensitive ZIP discovery helper
+from component_importer.file_discovery import iter_zip_files
+
 
 # Event-driven ZIP folder watcher
 class ZipFolderWatcher(QObject):
@@ -70,7 +73,7 @@ class ZipFolderWatcher(QObject):
         # Mark existing ZIP files as known so they are not auto-imported immediately
         self.known_files = {
             str(path.resolve())
-            for path in self.folder.glob("*.zip")
+            for path in iter_zip_files(self.folder)
         }
 
         # Watch this folder for OS-reported changes
@@ -119,7 +122,7 @@ class ZipFolderWatcher(QObject):
         now = time.time()
 
         # Loop through ZIP files
-        for zip_path in self.folder.glob("*.zip"):
+        for zip_path in iter_zip_files(self.folder):
             # Get resolved path key
             path_key = str(zip_path.resolve())
 

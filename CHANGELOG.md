@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added Linux compatibility support for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions.
+- Added platform-aware config and downloads folders.
+- Added Linux PyInstaller bundle script and Linux testing notes.
+- Added safer system tray fallback for Linux desktops without tray support.
+- Added case-insensitive ZIP discovery for Linux filesystems.
+
 ## 0.1.0 - 2026-05-18
 
 Initial public release.

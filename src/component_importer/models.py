@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Import PurePosixPath because paths inside ZIP files always use "/" separators
-# even when running on Windows
+# regardless of the host operating system
 from pathlib import PurePosixPath
 
 
