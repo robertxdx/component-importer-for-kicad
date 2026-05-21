@@ -10,6 +10,8 @@ Linux support is available for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based
 
 See the [installation guide](docs/INSTALL.md) for Windows and Linux setup steps.
 
+[<img src="docs/assets/discord.svg" alt="Discord" width="20" align="top"> Join the Discord](https://discord.gg/hnFYPJp6CK)
+
 Support the project: [Buy me a coffee](https://buy.stripe.com/cNieVeg1c7xbalm0CEdnW00)
 
 ## What It Does
