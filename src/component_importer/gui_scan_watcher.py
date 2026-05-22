@@ -35,6 +35,11 @@ class ZipFolderWatcher(QObject):
         self.stability_timer = QTimer(self)
         self.stability_timer.timeout.connect(self.check_candidates)
 
+        # One-shot follow-up handles browser temp-file rename timing
+        self.directory_rescan_timer = QTimer(self)
+        self.directory_rescan_timer.setSingleShot(True)
+        self.directory_rescan_timer.timeout.connect(self.scan_for_new_zip_candidates)
+
         # Store watched folder
         self.folder = None
 
@@ -89,6 +94,7 @@ class ZipFolderWatcher(QObject):
 
         # Stop timers
         self.stability_timer.stop()
+        self.directory_rescan_timer.stop()
 
         # Remove watched folders
         watched_directories = self.file_watcher.directories()
@@ -111,6 +117,10 @@ class ZipFolderWatcher(QObject):
 
         # Scan immediately for new ZIP candidates
         self.scan_for_new_zip_candidates()
+
+        # Browsers can signal the folder while the ZIP is still a temp file.
+        # Scan once more after that change burst so a final rename is visible.
+        self.directory_rescan_timer.start(1000)
 
     # Scan for new ZIP candidates
     def scan_for_new_zip_candidates(self) -> None:
