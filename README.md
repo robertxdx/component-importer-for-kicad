@@ -10,14 +10,6 @@ An open source desktop app for importing downloaded component ZIP libraries into
   <img src="docs/assets/configuration.png" alt="Configuration tab" width="950">
 </p>
 
-<p align="center">
-  <img src="docs/assets/import_zip.png" alt="Import ZIP tab" width="950">
-</p>
-
-<p align="center">
-  <img src="docs/assets/search.png" alt="Search tab" width="950">
-</p>
-
 Linux support is available for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions. See [Linux support notes](docs/LINUX.md).
 
 See the [installation guide](docs/INSTALL.md) for Windows and Linux setup steps.
