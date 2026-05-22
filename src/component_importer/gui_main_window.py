@@ -50,6 +50,9 @@ from component_importer.gui_import_worker import ImportComponentWorker
 # Import folder watcher
 from component_importer.gui_scan_watcher import ZipFolderWatcher
 
+# Import startup helper
+from component_importer.startup_manager import set_startup_enabled
+
 
 # Main GUI window
 class MainWindow(QMainWindow):
@@ -78,6 +81,7 @@ class MainWindow(QMainWindow):
         self.import_busy = False
         self.import_queue = []
         self.active_popups = []
+        self.closing_from_tray = False
 
         # Build UI
         self.build_ui()
@@ -90,6 +94,9 @@ class MainWindow(QMainWindow):
 
         # Start watcher if enabled
         self.restart_watcher()
+
+        # Apply startup setting if enabled in config
+        self.apply_startup_setting(show_log=False)
 
         # Prepare project libraries for the loaded config if possible
         self.prepare_project_libraries(show_log=False)
@@ -160,9 +167,20 @@ class MainWindow(QMainWindow):
         self.search_tab.logMessage.connect(self.log)
         self.import_tab.logMessage.connect(self.log)
         self.import_tab.importRequested.connect(self.start_import)
-        self.tabs.currentChanged.connect(self.update_log_visibility)
+        self.current_tab_index = self.tabs.currentIndex()
+        self.tabs.currentChanged.connect(self.on_current_tab_changed)
 
         # Apply initial log visibility for the selected tab
+        self.update_log_visibility()
+
+    # Handle tab changes and commit pending config edits before leaving config
+    def on_current_tab_changed(self, index: int) -> None:
+        previous_widget = self.tabs.widget(self.current_tab_index)
+
+        if previous_widget == self.config_tab:
+            self.sync_pending_config_from_fields(show_log=False)
+
+        self.current_tab_index = index
         self.update_log_visibility()
 
     # Hide the log panel on informational tabs
@@ -223,13 +241,15 @@ class MainWindow(QMainWindow):
         self.watcher.message.connect(self.log)
 
     # Restart watcher based on config
-    def restart_watcher(self) -> None:
+    def restart_watcher(self, show_disabled_log: bool = False) -> None:
         # Stop old watcher
         self.watcher.stop()
 
         # Start only if enabled
         if not self.config.auto_import_enabled:
-            self.log("Auto import watcher is disabled.")
+            if show_disabled_log:
+                self.log("Auto import watcher is disabled.")
+
             return
 
         # Start watcher
@@ -252,12 +272,29 @@ class MainWindow(QMainWindow):
         # Ensure libraries are created and registered as soon as config is valid
         self.prepare_project_libraries(show_log=show_log)
 
+        # Apply startup preference
+        self.apply_startup_setting(show_log=show_log)
+
         # Update tabs
         self.import_tab.update_config(config)
 
         # Restart watcher only when relevant settings changed
         if self.watcher_settings_changed(old_config, config):
-            self.restart_watcher()
+            user_turned_auto_import_off = (
+                old_config.auto_import_enabled
+                and not config.auto_import_enabled
+            )
+            self.restart_watcher(
+                show_disabled_log=user_turned_auto_import_off,
+            )
+
+    # Apply the startup-on-login setting
+    def apply_startup_setting(self, show_log: bool = False) -> None:
+        try:
+            set_startup_enabled(self.config.start_with_windows)
+        except Exception as error:
+            if show_log:
+                self.log(f"Startup setting error: {error}")
 
     # Check whether a config change affects the ZIP watcher
     def watcher_settings_changed(self, old_config, new_config) -> bool:
@@ -278,8 +315,8 @@ class MainWindow(QMainWindow):
             result = initialize_project_libraries(
                 project_root=self.config.project_root,
                 library_name=self.config.library_name,
-                symbol_library_name=self.config.symbol_library_name,
-                footprint_library_name=self.config.footprint_library_name,
+                symbol_library_name=self.config.library_name,
+                footprint_library_name=self.config.library_name,
             )
         except Exception as error:
             if show_log:
@@ -301,15 +338,30 @@ class MainWindow(QMainWindow):
 
     # Save current configuration fields without logging
     def save_current_config_silently(self) -> None:
+        # Use the normal config path so field edits update libraries,
+        # watchers, and startup settings before the app goes to tray or exits.
+        self.sync_pending_config_from_fields(show_log=False)
+
+    # Commit pending config field edits and apply side effects if anything changed
+    def sync_pending_config_from_fields(self, show_log: bool = False) -> None:
         if not hasattr(self, "config_tab"):
             return
 
-        # Stop any pending autosave and write the latest field values
+        # Stop any pending autosave and use the latest text field values now
         if hasattr(self.config_tab, "auto_save_timer"):
             self.config_tab.auto_save_timer.stop()
 
-        self.config = self.config_tab.build_config_from_fields()
-        save_gui_config(self.config)
+        config = self.config_tab.build_config_from_fields()
+
+        # Reflect normalized values, such as safe library-name cleanup
+        self.config_tab.config = config
+        self.config_tab.load_config_to_fields()
+
+        if config == self.config:
+            return
+
+        # Reuse the normal save handler so libraries/watchers/startup all update
+        self.on_config_saved(config, show_log=show_log)
 
     # Handle detected ZIP
     def on_zip_detected(self, zip_path: str) -> None:
@@ -324,6 +376,9 @@ class MainWindow(QMainWindow):
 
     # Validate config before operations
     def check_config_before_operation(self) -> bool:
+        # Make field edits active even if the user did not press Save Configuration
+        self.sync_pending_config_from_fields(show_log=False)
+
         # Validate config
         errors = validate_gui_config(self.config)
 
@@ -404,8 +459,8 @@ class MainWindow(QMainWindow):
         # Mark not busy
         self.import_busy = False
 
-        # Show a success popup for completed imports
-        if validation.get("passed", False):
+        # Show a success popup for completed imports, but not skipped duplicates
+        if validation.get("passed", False) and not result.get("skipped_existing", False):
             component_name = self.get_imported_component_name(
                 result=result,
                 fallback=import_context.get("part_name", "Component"),
@@ -447,20 +502,14 @@ class MainWindow(QMainWindow):
 
     # Get a readable library label for import messages
     def get_import_library_label(self) -> tuple[str, str]:
-        # Use the configured symbol and footprint libraries
-        symbol_library = self.config.symbol_library_name.strip() or self.config.library_name.strip()
-        footprint_library = self.config.footprint_library_name.strip() or self.config.library_name.strip()
+        # The GUI uses one shared library name for symbols and footprints
+        library_name = self.config.library_name.strip()
 
         # Fallback for incomplete configuration
-        if not symbol_library and not footprint_library:
+        if not library_name:
             return "configured", "library"
 
-        # If both asset types share a library name, use a singular message
-        if symbol_library == footprint_library:
-            return symbol_library, "library"
-
-        # Otherwise name both libraries
-        return f"{symbol_library} and {footprint_library}", "libraries"
+        return library_name, "library"
 
     # Get the most accurate imported component name from the import result
     def get_imported_component_name(self, result: dict, fallback: str) -> str:
@@ -493,14 +542,20 @@ class MainWindow(QMainWindow):
         )
 
         # Use a standalone popup if the main window is hidden to tray
-        parent = self if self.isVisible() else None
+        app_is_hidden_to_tray = not self.isVisible()
+        parent = None if app_is_hidden_to_tray else self
         popup = QMessageBox(parent)
         popup.setWindowTitle("Component imported")
+        popup.setWindowIcon(self.app_icon)
         popup.setIcon(QMessageBox.Icon.Information)
         popup.setText(message)
         popup.setStandardButtons(QMessageBox.StandardButton.Ok)
         popup.setModal(False)
         popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        # When the app is hidden to tray, show only the popup and bring it forward
+        if app_is_hidden_to_tray:
+            popup.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
         # Keep popup alive until the user closes it
         self.active_popups.append(popup)
@@ -513,6 +568,7 @@ class MainWindow(QMainWindow):
         popup.show()
         popup.raise_()
         popup.activateWindow()
+        QApplication.alert(popup, 0)
 
     # Log message
     def log(self, message: str) -> None:
@@ -533,21 +589,27 @@ class MainWindow(QMainWindow):
             if self.isMinimized():
                 QTimer.singleShot(0, self.hide_to_tray)
 
+    # Return True when the current platform can keep the app in the tray
+    def can_hide_to_tray(self) -> bool:
+        return self.tray_icon is not None and self.tray_icon.isVisible()
+
     # Hide window to tray
-    def hide_to_tray(self) -> None:
-        if self.tray_icon is None or not self.tray_icon.isVisible():
+    def hide_to_tray(self, show_message: bool = True) -> None:
+        if not self.can_hide_to_tray():
             return
 
         # Hide window
         self.hide()
 
-        # Show tray message
-        self.tray_icon.showMessage(
-            APP_NAME,
-            "The app is still running in the background.",
-            QSystemTrayIcon.MessageIcon.Information,
-            3000,
-        )
+        if show_message:
+            # Show tray message
+            self.tray_icon.showMessage(
+                APP_NAME,
+                "The app is still running in the background. "
+                "Right-click the tray icon and choose Exit to close it.",
+                QSystemTrayIcon.MessageIcon.Information,
+                3000,
+            )
 
     # Show window from tray
     def show_from_tray(self) -> None:
@@ -564,6 +626,9 @@ class MainWindow(QMainWindow):
 
     # Exit app
     def exit_app(self) -> None:
+        # Allow the close event to finish when exit is requested from the tray
+        self.closing_from_tray = True
+
         # Persist latest config values before quitting
         self.save_current_config_silently()
 
@@ -579,8 +644,20 @@ class MainWindow(QMainWindow):
 
     # Close event
     def closeEvent(self, event) -> None:
-        # X button closes the app fully
-        self.exit_app()
+        # Tray menu exit is the explicit way to close the app
+        if self.closing_from_tray:
+            event.accept()
+            return
 
-        # Accept event
-        event.accept()
+        # If the platform has no tray, close normally so the app is not trapped
+        if not self.can_hide_to_tray():
+            self.exit_app()
+            event.accept()
+            return
+
+        # X button hides to tray so automatic import can keep running
+        self.save_current_config_silently()
+        self.hide_to_tray()
+
+        # Keep the application running
+        event.ignore()

@@ -69,6 +69,11 @@ Optionally install a user-level desktop launcher:
 ./install_desktop_entry.sh
 ```
 
+The Configuration tab's login startup option creates a user-level XDG
+autostart entry at `~/.config/autostart/kicad-component-importer.desktop`.
+When started from that entry, the app opens minimized to the tray when the
+desktop exposes a system tray.
+
 ## Compatibility Notes
 
 PyInstaller Linux builds are not true cross-distro binaries. They do not bundle every system library, especially glibc and low-level desktop libraries. Build on the oldest supported distro baseline, then test on newer ones.

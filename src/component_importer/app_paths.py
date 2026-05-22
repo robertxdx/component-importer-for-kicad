@@ -89,16 +89,90 @@ def xdg_downloads_dir() -> Path | None:
             continue
 
         value = line.split("=", 1)[1].strip().strip('"')
-        value = value.replace("$HOME", str(Path.home()))
+        home_dir = str(Path.home())
+        value = value.replace("$HOME", home_dir)
+        value = value.replace("${HOME}", home_dir)
+        value = os.path.expandvars(value)
 
         if value:
-            return Path(value)
+            downloads_dir = Path(value).expanduser()
+
+            if not downloads_dir.is_absolute():
+                downloads_dir = Path.home() / downloads_dir
+
+            return downloads_dir
 
     return None
 
 
+# Get the Windows Downloads known folder, including when the user moved it
+def windows_downloads_dir() -> Path | None:
+    if not is_windows():
+        return None
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except ImportError:
+        return None
+
+    class GUID(ctypes.Structure):
+        _fields_ = [
+            ("Data1", wintypes.DWORD),
+            ("Data2", wintypes.WORD),
+            ("Data3", wintypes.WORD),
+            ("Data4", ctypes.c_ubyte * 8),
+        ]
+
+    folder_id_downloads = GUID(
+        0x374DE290,
+        0x123F,
+        0x4565,
+        (ctypes.c_ubyte * 8)(0x91, 0x64, 0x39, 0xC4, 0x92, 0x5E, 0x46, 0x7B),
+    )
+
+    path_pointer = wintypes.LPWSTR()
+    shell32 = ctypes.windll.shell32
+    ole32 = ctypes.windll.ole32
+
+    shell32.SHGetKnownFolderPath.argtypes = [
+        ctypes.POINTER(GUID),
+        wintypes.DWORD,
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.LPWSTR),
+    ]
+    shell32.SHGetKnownFolderPath.restype = wintypes.HRESULT
+    ole32.CoTaskMemFree.argtypes = [wintypes.LPVOID]
+    ole32.CoTaskMemFree.restype = None
+
+    result = shell32.SHGetKnownFolderPath(
+        ctypes.byref(folder_id_downloads),
+        0,
+        None,
+        ctypes.byref(path_pointer),
+    )
+
+    if result != 0:
+        return None
+
+    try:
+        if not path_pointer.value:
+            return None
+
+        return Path(path_pointer.value)
+    finally:
+        if path_pointer:
+            ole32.CoTaskMemFree(path_pointer)
+
+
 # Get the default downloads folder for the current platform
 def default_downloads_dir() -> Path:
+    if is_windows():
+        downloads_dir = windows_downloads_dir()
+
+        if downloads_dir is not None:
+            return downloads_dir
+
     if is_linux():
         downloads_dir = xdg_downloads_dir()
 

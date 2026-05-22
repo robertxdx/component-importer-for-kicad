@@ -17,6 +17,7 @@ from PyQt6.QtCore import pyqtSignal
 from component_importer.gui_config_manager import GuiConfig
 from component_importer.gui_config_manager import save_gui_config
 from component_importer.gui_config_manager import validate_gui_config
+from component_importer.startup_manager import startup_supported
 
 
 # Configuration tab
@@ -75,24 +76,30 @@ class ConfigTab(QWidget):
 
         # Library fields
         self.library_name_edit = QLineEdit()
-        self.symbol_library_name_edit = QLineEdit()
-        self.footprint_library_name_edit = QLineEdit()
 
         # Auto import checkbox
         self.auto_import_checkbox = QCheckBox("Automatically import new ZIP files from watched folder")
 
+        # Startup checkbox
+        self.start_with_windows_checkbox = QCheckBox(
+            "Start automatically on login"
+        )
+        self.start_with_windows_checkbox.setEnabled(startup_supported())
+        self.start_with_windows_checkbox.setToolTip(
+            "When started automatically, the app opens minimized to the tray "
+            "when a system tray is available."
+        )
+
         # Add rows
         form_layout.addRow("KiCad project root:", project_row)
         form_layout.addRow("Downloads/watch folder:", downloads_row)
-        form_layout.addRow("Main library name:", self.library_name_edit)
-        form_layout.addRow("Symbol library name:", self.symbol_library_name_edit)
-        form_layout.addRow("Footprint library name:", self.footprint_library_name_edit)
+        form_layout.addRow("Library name:", self.library_name_edit)
         form_layout.addRow("", self.auto_import_checkbox)
+        form_layout.addRow("", self.start_with_windows_checkbox)
 
         # Help label
         help_label = QLabel(
-            "Use the folder that contains the .kicad_pro file as project root. "
-            "Use one shared symbol library and one shared footprint library for all imported parts."
+            "Use the folder that contains the .kicad_pro file as project root."
         )
         help_label.setWordWrap(True)
 
@@ -126,13 +133,12 @@ class ConfigTab(QWidget):
             self.project_root_edit,
             self.downloads_folder_edit,
             self.library_name_edit,
-            self.symbol_library_name_edit,
-            self.footprint_library_name_edit,
         ]:
             line_edit.editingFinished.connect(self.schedule_auto_save)
 
         # Discrete controls save shortly after changing
         self.auto_import_checkbox.stateChanged.connect(self.schedule_auto_save)
+        self.start_with_windows_checkbox.stateChanged.connect(self.schedule_auto_save)
 
     # Start autosave unless fields are being loaded
     def schedule_auto_save(self, *args) -> None:
@@ -150,11 +156,10 @@ class ConfigTab(QWidget):
         self.project_root_edit.setText(self.config.project_root)
         self.downloads_folder_edit.setText(self.config.downloads_folder)
         self.library_name_edit.setText(self.config.library_name)
-        self.symbol_library_name_edit.setText(self.config.symbol_library_name)
-        self.footprint_library_name_edit.setText(self.config.footprint_library_name)
 
         # Set checkboxes
         self.auto_import_checkbox.setChecked(self.config.auto_import_enabled)
+        self.start_with_windows_checkbox.setChecked(self.config.start_with_windows)
 
         # Field population is complete
         self.loading_config = False
@@ -189,14 +194,17 @@ class ConfigTab(QWidget):
 
     # Build a config object from current field values
     def build_config_from_fields(self) -> GuiConfig:
+        library_name = self.library_name_edit.text().strip()
+
         return GuiConfig(
             project_root=self.project_root_edit.text().strip(),
-            library_name=self.library_name_edit.text().strip(),
-            symbol_library_name=self.symbol_library_name_edit.text().strip(),
-            footprint_library_name=self.footprint_library_name_edit.text().strip(),
+            library_name=library_name,
+            symbol_library_name=library_name,
+            footprint_library_name=library_name,
             downloads_folder=self.downloads_folder_edit.text().strip(),
             create_backups=True,
             auto_import_enabled=self.auto_import_checkbox.isChecked(),
+            start_with_windows=self.start_with_windows_checkbox.isChecked(),
         )
 
     # Save config from fields
@@ -211,6 +219,11 @@ class ConfigTab(QWidget):
     def commit_config_from_fields(self, show_log: bool = False) -> None:
         # Build config
         config = self.build_config_from_fields()
+
+        # Reflect normalized values, such as safe library-name cleanup
+        self.loading_config = True
+        self.library_name_edit.setText(config.library_name)
+        self.loading_config = False
 
         # Validate config
         errors = validate_gui_config(config)

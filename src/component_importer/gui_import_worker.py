@@ -110,18 +110,34 @@ class ImportComponentWorker(QObject):
                 zip_path=self.zip_path,
                 project_root=project_root,
                 library_name=self.config.library_name,
-                symbol_library_name=self.config.symbol_library_name,
-                footprint_library_name=self.config.footprint_library_name,
+                symbol_library_name=self.config.library_name,
+                footprint_library_name=self.config.library_name,
                 part_name=self.part_name,
                 footprint_filter_mode="exact",
                 create_backups=True,
+                skip_existing_components=True,
             )
+
+            # Existing components are intentionally skipped to avoid duplicates
+            if result.get("skipped_existing", False):
+                validation = {
+                    "passed": True,
+                    "warnings": [],
+                    "checks": {},
+                    "skipped_existing": True,
+                }
+                output = (
+                    f"Import: {self.part_name}\n"
+                    "Component already exists in the configured library. Import skipped."
+                )
+                self.finished.emit(result, validation, output)
+                return
 
             # Run validation
             validation = validate_imported_part(
                 project_root=project_root,
                 result=result,
-                library_name=self.config.footprint_library_name,
+                library_name=self.config.library_name,
             )
 
             # Build compact GUI log output

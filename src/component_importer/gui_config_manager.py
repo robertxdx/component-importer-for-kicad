@@ -7,6 +7,9 @@ from dataclasses import asdict
 # Import fields to ignore stale keys from older config files
 from dataclasses import fields
 
+# Import field for dynamic default values
+from dataclasses import field
+
 # Import Path for filesystem paths
 from pathlib import Path
 
@@ -19,6 +22,7 @@ import re
 # Import app path helper
 from component_importer.app_paths import default_downloads_dir
 from component_importer.app_paths import gui_config_file_path
+from component_importer.library_table_updater import make_library_nickname
 
 
 # Default config file
@@ -28,29 +32,57 @@ CONFIG_FILE = gui_config_file_path()
 RECOMMENDED_STABLE_ZIP_DELAY_SECONDS = 4
 
 
+# Normalize user-entered text values from config files and fields
+def clean_config_text(value: object) -> str:
+    if value is None:
+        return ""
+
+    return str(value).strip()
+
+
 # Store GUI configuration
 @dataclass
 class GuiConfig:
     # KiCad project root folder, this must contain the .kicad_pro file
     project_root: str = ""
 
-    # Main library name used as fallback
+    # Shared library name used for generated symbol and footprint libraries
     library_name: str = "Project_Components"
 
-    # Symbol library name without .kicad_sym
+    # Backward-compatible config field, always normalized to library_name
     symbol_library_name: str = "Project_Components"
 
-    # Footprint library name without .pretty
+    # Backward-compatible config field, always normalized to library_name
     footprint_library_name: str = "Project_Components"
 
     # Folder watched for newly downloaded ZIP files
-    downloads_folder: str = str(default_downloads_dir())
+    downloads_folder: str = field(
+        default_factory=lambda: str(default_downloads_dir())
+    )
 
     # Create backups before overwriting files
     create_backups: bool = True
 
     # Automatically import new ZIP files detected in downloads folder
     auto_import_enabled: bool = False
+
+    # Start the app automatically when the user signs in, where supported
+    start_with_windows: bool = False
+
+    # Keep one user-facing library name for both symbol and footprint libraries
+    def __post_init__(self) -> None:
+        shared_library_name = (
+            clean_config_text(self.library_name)
+            or clean_config_text(self.symbol_library_name)
+            or clean_config_text(self.footprint_library_name)
+        )
+
+        if shared_library_name:
+            shared_library_name = make_library_nickname(shared_library_name)
+
+        self.library_name = shared_library_name
+        self.symbol_library_name = shared_library_name
+        self.footprint_library_name = shared_library_name
 
 
 # Convert a dictionary to GuiConfig with safe defaults
@@ -63,6 +95,25 @@ def config_from_dict(data: dict) -> GuiConfig:
 
     # Update defaults with loaded data
     default_data.update(data)
+
+    # Use the platform default when older or hand-edited configs leave this blank
+    if not str(default_data.get("downloads_folder", "")).strip():
+        default_data["downloads_folder"] = str(default_downloads_dir())
+
+    # Migrate older split-name configs to one shared library name
+    shared_library_name = (
+        clean_config_text(data.get("library_name"))
+        or clean_config_text(data.get("symbol_library_name"))
+        or clean_config_text(data.get("footprint_library_name"))
+        or clean_config_text(default_data.get("library_name"))
+    )
+
+    if shared_library_name:
+        shared_library_name = make_library_nickname(shared_library_name)
+
+    default_data["library_name"] = shared_library_name
+    default_data["symbol_library_name"] = shared_library_name
+    default_data["footprint_library_name"] = shared_library_name
 
     # Backups are intentionally always enabled, even for older config files
     default_data["create_backups"] = True
@@ -88,8 +139,15 @@ def load_gui_config(config_path: str | Path = CONFIG_FILE) -> GuiConfig:
     if not config_path.exists():
         return GuiConfig()
 
-    # Read config file
-    data = json.loads(config_path.read_text(encoding="utf-8"))
+    # Read config file, falling back to defaults if it is damaged
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return GuiConfig()
+
+    # Ignore invalid top-level config shapes
+    if not isinstance(data, dict):
+        return GuiConfig()
 
     # Convert dictionary to config object
     return config_from_dict(data)
@@ -103,15 +161,20 @@ def save_gui_config(config: GuiConfig, config_path: str | Path = CONFIG_FILE) ->
     # Create parent folder if needed
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Normalize legacy split library fields before writing
+    config = GuiConfig(**asdict(config))
+
     # Backups are intentionally always enabled
     data = asdict(config)
     data["create_backups"] = True
 
-    # Write formatted JSON
-    config_path.write_text(
+    # Write formatted JSON atomically to avoid half-written config files
+    temp_path = config_path.with_name(f"{config_path.name}.tmp")
+    temp_path.write_text(
         json.dumps(data, indent=2),
         encoding="utf-8",
     )
+    temp_path.replace(config_path)
 
 
 # Make a string safe for filenames and simple part names
@@ -182,6 +245,8 @@ def validate_gui_config(config: GuiConfig) -> list[str]:
         errors.append("Project root is empty.")
     elif not Path(config.project_root).exists():
         errors.append(f"Project root does not exist: {config.project_root}")
+    elif not Path(config.project_root).is_dir():
+        errors.append(f"Project root is not a folder: {config.project_root}")
     else:
         project_files = list(Path(config.project_root).glob("*.kicad_pro"))
 
@@ -193,13 +258,12 @@ def validate_gui_config(config: GuiConfig) -> list[str]:
         errors.append("Downloads folder is empty.")
     elif not Path(config.downloads_folder).exists():
         errors.append(f"Downloads folder does not exist: {config.downloads_folder}")
+    elif not Path(config.downloads_folder).is_dir():
+        errors.append(f"Downloads folder is not a folder: {config.downloads_folder}")
 
-    # Check library names
-    if not config.symbol_library_name.strip():
-        errors.append("Symbol library name is empty.")
-
-    if not config.footprint_library_name.strip():
-        errors.append("Footprint library name is empty.")
+    # Check shared library name
+    if not config.library_name.strip():
+        errors.append("Library name is empty.")
 
     # Return validation errors
     return errors

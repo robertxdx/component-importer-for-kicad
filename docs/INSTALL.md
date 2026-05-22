@@ -12,7 +12,7 @@ KiCadComponentImporter_Setup.exe
 
 2. Run the installer.
 3. Launch **KiCad Component Importer** from the Start menu.
-4. Select your KiCad project folder, downloads/watch folder, and library names in the Configuration tab.
+4. Select your KiCad project folder, downloads/watch folder, and library name in the Configuration tab, then save the configuration once. On later launches the saved configuration is active automatically; save again only after changing those values. The login startup option opens the app minimized to the tray when a system tray is available.
 
 ## Linux Bundle
 
@@ -43,7 +43,7 @@ cd KiCadComponentImporter
 ./install_desktop_entry.sh
 ```
 
-After that, search for **KiCad Component Importer** in your app launcher.
+After that, search for **KiCad Component Importer** in your app launcher. The login startup option opens the app minimized to the tray when a system tray is available.
 
 ## Linux Source Install
 
@@ -111,4 +111,5 @@ Linux bundle: delete the extracted `KiCadComponentImporter` folder. If you insta
 ```bash
 rm -f ~/.local/share/applications/kicad-component-importer.desktop
 rm -f ~/.local/share/icons/hicolor/256x256/apps/kicad-component-importer.png
+rm -f ~/.config/autostart/kicad-component-importer.desktop
 ```

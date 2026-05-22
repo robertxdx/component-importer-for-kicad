@@ -7,6 +7,7 @@
 - Added Linux PyInstaller bundle script and Linux testing notes.
 - Added safer system tray fallback for Linux desktops without tray support.
 - Added case-insensitive ZIP discovery for Linux filesystems.
+- Added login startup wording and minimized-to-tray startup behavior.
 
 ## 0.1.0 - 2026-05-18
 

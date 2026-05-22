@@ -14,8 +14,15 @@ def iter_zip_files(folder: str | Path) -> list[Path]:
     except OSError:
         return []
 
-    return [
-        path
-        for path in candidates
-        if path.is_file() and path.suffix.lower() == ".zip"
-    ]
+    zip_files = []
+
+    for path in candidates:
+        try:
+            is_zip_file = path.is_file() and path.suffix.lower() == ".zip"
+        except OSError:
+            continue
+
+        if is_zip_file:
+            zip_files.append(path)
+
+    return zip_files

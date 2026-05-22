@@ -13,6 +13,9 @@ import json
 # Import shutil to copy files
 import shutil
 
+# Import os for path containment checks
+import os
+
 # Import our asset type enum
 from component_importer.models import AssetType
 
@@ -21,15 +24,18 @@ from component_importer.project_library import create_project_library_structure
 
 # Import function that scans ZIP contents
 from component_importer.zip_scanner import scan_cad_zip
+from component_importer.zip_scanner import safe_member_filename
 
 # Import function that fixes 3D model paths inside imported footprints
 from component_importer.footprint_3d_fixer import fix_3d_paths_for_imported_footprints
 
 # Import function that updates KiCad project library tables
+from component_importer.library_table_updater import make_library_nickname
 from component_importer.library_table_updater import update_kicad_library_tables
 
 # Import function that links symbols to imported footprint options
 from component_importer.symbol_footprint_linker import link_symbol_library_to_footprints
+from component_importer.symbol_footprint_linker import find_symbol_blocks
 
 # Import symbol library merge helper
 from component_importer.symbol_library_manager import merge_symbol_library_content_into_target
@@ -39,16 +45,19 @@ from component_importer.backup_helper import get_backup_timestamp, backup_file_i
 
 
 # Make a string safe to use as a filename across supported platforms
-def safe_filename(name: str) -> str:
-    # Use the strict Windows set so names also travel cleanly between platforms
-    invalid_chars = '<>:"/\\|?*'
+def safe_filename(name: str, fallback: str = "imported_asset") -> str:
+    return safe_member_filename(name, fallback=fallback)
 
-    # Replace each invalid character with an underscore
-    for char in invalid_chars:
-        name = name.replace(char, "_")
 
-    # Remove leading and trailing whitespace
-    return name.strip()
+# Check whether a path stays inside a target folder
+def path_is_inside_folder(folder: Path, path: Path) -> bool:
+    folder_text = os.path.normcase(os.path.abspath(str(folder)))
+    path_text = os.path.normcase(os.path.abspath(str(path)))
+
+    try:
+        return os.path.commonpath([folder_text, path_text]) == folder_text
+    except ValueError:
+        return False
 
 
 # Build a safe target path that avoids overwriting existing files unless overwrite is enabled
@@ -57,8 +66,15 @@ def build_target_path(
     filename: str,
     overwrite_existing: bool,
 ) -> Path:
+    # Clean ZIP-derived filenames before joining with filesystem paths
+    filename = safe_filename(filename)
+
     # Build initial target path
     target = folder / filename
+
+    # Defense-in-depth against absolute names or traversal after cleanup
+    if not path_is_inside_folder(folder, target):
+        raise ValueError(f"Unsafe target path resolved outside folder: {target}")
 
     # If overwriting is allowed, return the direct target
     if overwrite_existing:
@@ -127,6 +143,106 @@ def should_include_default_footprint_in_filters(footprint_files: list[str]) -> b
     return True
 
 
+# Get symbol names from one KiCad symbol library text
+def get_symbol_names_from_content(symbol_library_content: str) -> list[str]:
+    symbol_names = [
+        block.get("name", "")
+        for block in find_symbol_blocks(symbol_library_content)
+    ]
+
+    return [
+        symbol_name
+        for symbol_name in symbol_names
+        if symbol_name
+    ]
+
+
+# Read symbol names from all source symbol libraries inside the ZIP
+def get_source_symbol_names(zf: ZipFile, assets: list) -> list[str]:
+    symbol_names = []
+
+    for asset in assets:
+        if asset.asset_type != AssetType.SYMBOL_LIB:
+            continue
+
+        with zf.open(asset.original_path.as_posix()) as src:
+            source_content = src.read().decode("utf-8", errors="ignore")
+
+        symbol_names.extend(get_symbol_names_from_content(source_content))
+
+    # Remove duplicates while preserving order
+    return list(dict.fromkeys(symbol_names))
+
+
+# Read existing symbol names from the selected project symbol library
+def get_existing_symbol_names(symbol_library_path: str | Path) -> list[str]:
+    symbol_library_path = Path(symbol_library_path)
+
+    if not symbol_library_path.exists():
+        return []
+
+    content = symbol_library_path.read_text(encoding="utf-8", errors="ignore")
+    return get_symbol_names_from_content(content)
+
+
+# Resolve target paths for primary footprint assets without creating duplicates
+def get_source_footprint_targets(assets: list, footprint_lib_dir: Path) -> list[Path]:
+    footprint_targets = []
+
+    for asset in assets:
+        if asset.asset_type != AssetType.FOOTPRINT:
+            continue
+
+        footprint_targets.append(
+            build_target_path(
+                folder=footprint_lib_dir,
+                filename=asset.filename,
+                overwrite_existing=True,
+            )
+        )
+
+    return footprint_targets
+
+
+# Check whether the ZIP's primary KiCad assets already exist in the target library
+def detect_existing_component(zf: ZipFile, assets: list, paths: dict) -> dict:
+    source_symbol_names = get_source_symbol_names(zf, assets)
+    existing_symbol_names = get_existing_symbol_names(paths["symbol_lib_path"])
+    footprint_targets = get_source_footprint_targets(
+        assets=assets,
+        footprint_lib_dir=paths["footprint_lib_dir"],
+    )
+
+    has_symbols = bool(source_symbol_names)
+    has_footprints = bool(footprint_targets)
+
+    if not has_symbols and not has_footprints:
+        return {
+            "already_exists": False,
+            "source_symbol_names": source_symbol_names,
+            "existing_footprints": [],
+        }
+
+    source_symbols_exist = (
+        not has_symbols
+        or all(symbol_name in existing_symbol_names for symbol_name in source_symbol_names)
+    )
+    source_footprints_exist = (
+        not has_footprints
+        or all(footprint_target.exists() for footprint_target in footprint_targets)
+    )
+
+    return {
+        "already_exists": source_symbols_exist and source_footprints_exist,
+        "source_symbol_names": source_symbol_names,
+        "existing_footprints": [
+            str(footprint_target)
+            for footprint_target in footprint_targets
+            if footprint_target.exists()
+        ],
+    }
+
+
 # Import a CAD ZIP file into a selected KiCad project-local library
 def import_cad_zip(
     zip_path: str | Path,
@@ -144,6 +260,7 @@ def import_cad_zip(
     create_backups: bool = True,
     merge_symbols_into_selected_library: bool = True,
     replace_existing_symbols: bool = True,
+    skip_existing_components: bool = True,
 ) -> dict:
     # Convert input paths to Path objects
     zip_path = Path(zip_path)
@@ -158,6 +275,11 @@ def import_cad_zip(
 
     if footprint_library_name is None:
         footprint_library_name = library_name
+
+    # Use KiCad-safe names for target library files and table nicknames
+    library_name = make_library_nickname(library_name)
+    symbol_library_name = make_library_nickname(symbol_library_name)
+    footprint_library_name = make_library_nickname(footprint_library_name)
 
     # Stop early if ZIP file does not exist
     if not zip_path.exists():
@@ -193,7 +315,24 @@ def import_cad_zip(
         "library_table_update": None,
         "symbol_footprint_link": [],
         "backups": [],
+        "skipped_existing": False,
+        "existing_assets": {},
     }
+
+    # Skip already imported components before copying or modifying files
+    with ZipFile(zip_path, "r") as zf:
+        existing_assets = detect_existing_component(
+            zf=zf,
+            assets=assets,
+            paths=paths,
+        )
+
+    imported["existing_assets"] = existing_assets
+
+    if skip_existing_components and existing_assets.get("already_exists", False):
+        imported["skipped_existing"] = True
+        imported["message"] = "Component already exists in the configured library. Import skipped."
+        return imported
 
     # Build target path for original source ZIP copy
     source_zip_target = build_target_path(

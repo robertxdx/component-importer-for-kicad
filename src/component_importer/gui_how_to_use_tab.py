@@ -46,19 +46,16 @@ class HowToUseTab(QWidget):
 
             <h3>Step 4.</h3>
             <p>
-              Name your components library. Use the same name for the main,
-              symbol, and footprint library unless you have a specific reason
-              to split them. When the configuration is saved, the app creates
-              and registers these project libraries.
+              Input your downloads folder path, name your library, check or
+              uncheck <b>Automatically import new ZIP files</b>, optionally
+              check <b>Start automatically on login</b>, then click
+              <b>Save Configuration</b>. After this is saved once, the app uses
+              that configuration automatically on startup. Click
+              <b>Save Configuration</b> again only when you change the project
+              root, downloads folder, library name, or checkboxes.
             </p>
 
             <h3>Step 5.</h3>
-            <p>
-              Choose the folder where you download component ZIP files, then
-              click <b>Save Configuration</b>.
-            </p>
-
-            <h3>Step 6.</h3>
             <p>
               Open KiCad again and open the schematic. The project libraries
               are now already registered before KiCad loads the project.
@@ -74,15 +71,50 @@ class HowToUseTab(QWidget):
 
             <h3>Step 2.</h3>
             <p>
-              Import the ZIP. Double-click a ZIP entry in the Import ZIP tab, or
-              select it and click <b>Use Selected ZIP</b>, then click
-              <b>Import ZIP</b>.
+              Import the ZIP. Click a ZIP entry in the Import ZIP tab to put it
+              in the <b>Component ZIP</b> box, then click <b>Import ZIP</b>.
             </p>
 
             <h3>Step 3.</h3>
             <p>
               In KiCad, place the symbol from your configured symbol library.
               The footprint is assigned automatically by the importer.
+            </p>
+
+            <h2>Automatic import</h2>
+
+            <p>
+              When <b>Automatically import new ZIP files</b> is checked and
+              saved, keep this app running. Minimize the app or press
+              <b>X</b> to send it to the tray. To close the app fully,
+              right-click the tray icon and choose <b>Exit</b>.
+              While the app is running in the tray, it watches the configured
+              downloads folder for new ZIP files.
+            </p>
+
+            <p>
+              When a new ZIP appears, the app waits briefly for the download to
+              finish, names the component from the ZIP filename, imports it into
+              the configured library, creates backups, and shows a confirmation
+              popup when the import finishes.
+            </p>
+
+            <p>
+              If the same component is already present in the configured
+              library, the app skips the import so duplicate KiCad entries are
+              not created.
+            </p>
+
+            <p>
+              If you change the <b>Library name</b>, the app creates or reuses
+              the matching project library for that name. If you switch back to
+              an older library name, new components are imported alongside the
+              components already stored in that older library.
+            </p>
+
+            <p>
+              When automatic import is unchecked, use the <b>Import ZIP</b> tab
+              to import ZIP files manually.
             </p>
 
             <h2>KiCad 10 behavior</h2>
@@ -108,20 +140,17 @@ class HowToUseTab(QWidget):
             <ul>
               <li><b>KiCad project root</b>: folder that contains the project <b>.kicad_pro</b> file.</li>
               <li><b>Downloads/watch folder</b>: folder where you download the component ZIP files.</li>
-              <li><b>Main library name</b>: default shared library name used by the app.</li>
-              <li><b>Symbol library name</b>: name of the generated <b>.kicad_sym</b> library.</li>
-              <li><b>Footprint library name</b>: name of the generated <b>.pretty</b> footprint library.</li>
-              <li><b>Automatically import new ZIP files</b>: watches that folder for newly downloaded component ZIP files and imports them automatically.</li>
+              <li><b>Library name</b>: shared name used for the generated <b>.kicad_sym</b> and <b>.pretty</b> libraries.</li>
+              <li><b>Automatically import new ZIP files</b>: watches the downloads folder while the app is running and imports new ZIP files after they finish downloading.</li>
+              <li><b>Start automatically on login</b>: starts this app when you log in and opens it minimized to the tray when a system tray is available.</li>
             </ul>
 
             <h3>Import ZIP tab</h3>
             <ul>
               <li><b>Component ZIP</b>: selected provider ZIP file to import.</li>
               <li><b>Browse</b>: choose a ZIP manually.</li>
-              <li><b>Refresh Downloads</b>: list recent ZIPs from the watch folder.</li>
-              <li><b>Use Selected ZIP</b>: copy the selected list entry into the Component ZIP field.</li>
               <li><b>Import ZIP</b>: imports symbols, footprints, 3D models, datasheets, and updates KiCad library tables.</li>
-              <li><b>ZIP list</b>: double-click a ZIP to select it quickly.</li>
+              <li><b>ZIP list</b>: updates when the watch folder changes; click a ZIP to copy it into the Component ZIP field.</li>
             </ul>
 
             <h3>Search tab</h3>
@@ -137,7 +166,10 @@ class HowToUseTab(QWidget):
             <ul>
               <li>The app always creates backups before changing project library files.</li>
               <li>Auto import waits a short built-in moment for a ZIP file to finish downloading before importing it.</li>
+              <li>Already imported components are skipped to avoid duplicate KiCad entries.</li>
+              <li>For automatic import, minimize the app or press <b>X</b> to keep it running in the tray. To stop the app, right-click the tray icon and choose <b>Exit</b>.</li>
               <li>When an import succeeds, the app shows a confirmation popup with the component and library name.</li>
+              <li>Saved configuration is loaded automatically when the app starts. Save again only after changing configuration values.</li>
               <li>For first use, configure and save this app before opening KiCad so KiCad loads the project libraries from the start.</li>
               <li>If a KiCad chooser was already open during import, close and reopen only that chooser to refresh its view.</li>
               <li>The app imports libraries. It does not automatically place a new symbol onto the schematic.</li>

@@ -31,15 +31,28 @@ def list_zip_files(
     # Find all ZIP files inside the folder
     zip_files = iter_zip_files(folder)
 
+    # Store files that still exist long enough to stat them
+    zip_file_rows = []
+
+    for zip_file in zip_files:
+        try:
+            modified_time = zip_file.stat().st_mtime
+        except OSError:
+            continue
+
+        zip_file_rows.append((modified_time, zip_file))
+
     # Sort ZIP files by modification time, newest first
-    zip_files = sorted(
-        zip_files,
-        key=lambda file_path: file_path.stat().st_mtime,
+    zip_file_rows.sort(
+        key=lambda item: item[0],
         reverse=True,
     )
 
     # Return only the requested number of results
-    return zip_files[:max_results]
+    return [
+        zip_file
+        for _modified_time, zip_file in zip_file_rows[:max_results]
+    ]
 
 
 # Print the latest ZIP files from a folder

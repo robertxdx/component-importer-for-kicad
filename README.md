@@ -3,7 +3,19 @@
 An open source desktop app for importing downloaded component ZIP libraries into KiCad projects.
 
 <p align="center">
-  <img src="docs/assets/importer.png" alt="Component Importer for KiCad configuration tab" width="900">
+  <img src="docs/assets/github_header.png" alt="Auto-importer for KiCad" width="950">
+</p>
+
+<p align="center">
+  <img src="docs/assets/configuration.png" alt="Configuration tab" width="950">
+</p>
+
+<p align="center">
+  <img src="docs/assets/import_zip.png" alt="Import ZIP tab" width="950">
+</p>
+
+<p align="center">
+  <img src="docs/assets/search.png" alt="Search tab" width="950">
 </p>
 
 Linux support is available for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions. See [Linux support notes](docs/LINUX.md).
@@ -27,6 +39,7 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 - Copies 3D models, datasheets, source ZIPs, and metadata into organized folders.
 - Links imported symbols to their imported footprints automatically.
 - Watches a downloads folder and can auto-import new component ZIP files.
+- Can start automatically on login and stay minimized in the system tray.
 - Provides provider search links from inside the app.
 - Shows simple import confirmations and keeps detailed file backups automatically.
 
