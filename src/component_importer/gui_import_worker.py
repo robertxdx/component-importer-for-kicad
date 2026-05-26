@@ -8,6 +8,9 @@ from pathlib import Path
 # Import component ZIP importer
 from component_importer.cad_zip_importer import import_cad_zip
 
+# Import symbol style helper
+from component_importer.gui_config_manager import build_symbol_style_from_config
+
 # Import import validator
 from component_importer.import_validator import validate_imported_part
 
@@ -116,6 +119,7 @@ class ImportComponentWorker(QObject):
                 footprint_filter_mode="exact",
                 create_backups=True,
                 skip_existing_components=True,
+                symbol_style=build_symbol_style_from_config(self.config),
             )
 
             # Existing components are intentionally skipped to avoid duplicates
@@ -126,9 +130,16 @@ class ImportComponentWorker(QObject):
                     "checks": {},
                     "skipped_existing": True,
                 }
+                skipped_message = (
+                    "Component already exists in the configured library. Import skipped."
+                )
+
+                if result.get("symbol_style_update"):
+                    skipped_message += "\nSymbol style refreshed."
+
                 output = (
                     f"Import: {self.part_name}\n"
-                    "Component already exists in the configured library. Import skipped."
+                    f"{skipped_message}"
                 )
                 self.finished.emit(result, validation, output)
                 return

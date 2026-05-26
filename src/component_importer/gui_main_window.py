@@ -43,6 +43,7 @@ from component_importer.gui_config_tab import ConfigTab
 from component_importer.gui_search_tab import SearchTab
 from component_importer.gui_import_tab import ImportTab
 from component_importer.gui_how_to_use_tab import HowToUseTab
+from component_importer.gui_symbol_style_tab import SymbolStyleTab
 
 # Import worker classes
 from component_importer.gui_import_worker import ImportComponentWorker
@@ -115,12 +116,14 @@ class MainWindow(QMainWindow):
         # Tabs
         self.tabs = QTabWidget()
         self.config_tab = ConfigTab(self.config)
+        self.symbol_style_tab = SymbolStyleTab(self.config)
         self.import_tab = ImportTab(self.config)
         self.search_tab = SearchTab()
         self.how_to_use_tab = HowToUseTab()
 
         # Add tabs
         self.tabs.addTab(self.config_tab, "Configuration")
+        self.tabs.addTab(self.symbol_style_tab, "Symbol Style")
         self.tabs.addTab(self.import_tab, "Import ZIP")
         self.tabs.addTab(self.search_tab, "Search")
         self.tabs.addTab(self.how_to_use_tab, "How to use")
@@ -164,6 +167,8 @@ class MainWindow(QMainWindow):
         # Connect tab signals
         self.config_tab.configSaved.connect(self.on_config_saved)
         self.config_tab.logMessage.connect(self.log)
+        self.symbol_style_tab.configSaved.connect(self.on_config_saved)
+        self.symbol_style_tab.logMessage.connect(self.log)
         self.search_tab.logMessage.connect(self.log)
         self.import_tab.logMessage.connect(self.log)
         self.import_tab.importRequested.connect(self.start_import)
@@ -179,6 +184,8 @@ class MainWindow(QMainWindow):
 
         if previous_widget == self.config_tab:
             self.sync_pending_config_from_fields(show_log=False)
+        elif previous_widget == self.symbol_style_tab:
+            self.sync_pending_symbol_style_from_fields(show_log=False)
 
         self.current_tab_index = index
         self.update_log_visibility()
@@ -276,6 +283,8 @@ class MainWindow(QMainWindow):
         self.apply_startup_setting(show_log=show_log)
 
         # Update tabs
+        self.config_tab.update_config(config)
+        self.symbol_style_tab.update_config(config)
         self.import_tab.update_config(config)
 
         # Restart watcher only when relevant settings changed
@@ -341,6 +350,7 @@ class MainWindow(QMainWindow):
         # Use the normal config path so field edits update libraries,
         # watchers, and startup settings before the app goes to tray or exits.
         self.sync_pending_config_from_fields(show_log=False)
+        self.sync_pending_symbol_style_from_fields(show_log=False)
 
     # Commit pending config field edits and apply side effects if anything changed
     def sync_pending_config_from_fields(self, show_log: bool = False) -> None:
@@ -361,6 +371,24 @@ class MainWindow(QMainWindow):
             return
 
         # Reuse the normal save handler so libraries/watchers/startup all update
+        self.on_config_saved(config, show_log=show_log)
+
+    # Commit pending symbol style edits and apply side effects if anything changed
+    def sync_pending_symbol_style_from_fields(self, show_log: bool = False) -> None:
+        if not hasattr(self, "symbol_style_tab"):
+            return
+
+        if hasattr(self.symbol_style_tab, "auto_save_timer"):
+            self.symbol_style_tab.auto_save_timer.stop()
+
+        config = self.symbol_style_tab.build_config_from_fields()
+
+        self.symbol_style_tab.config = config
+        self.symbol_style_tab.load_config_to_fields()
+
+        if config == self.config:
+            return
+
         self.on_config_saved(config, show_log=show_log)
 
     # Handle detected ZIP

@@ -48,6 +48,11 @@ class ConfigTab(QWidget):
         # Autosave config when fields are edited
         self.setup_auto_save()
 
+    # Update tab state from a config object
+    def update_config(self, config: GuiConfig) -> None:
+        self.config = config
+        self.load_config_to_fields()
+
     # Build UI widgets
     def build_ui(self) -> None:
         # Main layout
@@ -205,6 +210,12 @@ class ConfigTab(QWidget):
             create_backups=True,
             auto_import_enabled=self.auto_import_checkbox.isChecked(),
             start_with_windows=self.start_with_windows_checkbox.isChecked(),
+            symbol_style_enabled=self.config.symbol_style_enabled,
+            symbol_line_width_mm=self.config.symbol_line_width_mm,
+            symbol_line_color=self.config.symbol_line_color,
+            symbol_fill_mode=self.config.symbol_fill_mode,
+            symbol_fill_color=self.config.symbol_fill_color,
+            symbol_font_size_mm=self.config.symbol_font_size_mm,
         )
 
     # Save config from fields

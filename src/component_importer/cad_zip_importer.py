@@ -40,6 +40,10 @@ from component_importer.symbol_footprint_linker import find_symbol_blocks
 # Import symbol library merge helper
 from component_importer.symbol_library_manager import merge_symbol_library_content_into_target
 
+# Import optional symbol style rewriter
+from component_importer.symbol_style import apply_symbol_style_to_symbol_file
+from component_importer.symbol_style import normalize_symbol_style
+
 # Import backup helpers
 from component_importer.backup_helper import get_backup_timestamp, backup_file_if_exists
 
@@ -243,6 +247,45 @@ def detect_existing_component(zf: ZipFile, assets: list, paths: dict) -> dict:
     }
 
 
+# Apply the configured symbol style to a selected set of symbols in one library
+def apply_style_to_selected_symbols(
+    project_root: Path,
+    symbol_library_path: Path,
+    symbol_style: object | None,
+    symbol_names: list[str],
+    backup_timestamp: str,
+    create_backups: bool,
+    imported: dict,
+) -> None:
+    if symbol_style is None:
+        return
+
+    symbol_names = [
+        symbol_name
+        for symbol_name in dict.fromkeys(symbol_names)
+        if symbol_name
+    ]
+
+    if not symbol_names:
+        return
+
+    if create_backups:
+        backup_path = backup_file_if_exists(
+            project_root=project_root,
+            target_file=symbol_library_path,
+            backup_timestamp=backup_timestamp,
+        )
+
+        if backup_path:
+            imported["backups"].append(backup_path)
+
+    imported["symbol_style_update"] = apply_symbol_style_to_symbol_file(
+        symbol_library_path=symbol_library_path,
+        symbol_style=symbol_style,
+        symbol_names=symbol_names,
+    )
+
+
 # Import a CAD ZIP file into a selected KiCad project-local library
 def import_cad_zip(
     zip_path: str | Path,
@@ -261,6 +304,7 @@ def import_cad_zip(
     merge_symbols_into_selected_library: bool = True,
     replace_existing_symbols: bool = True,
     skip_existing_components: bool = True,
+    symbol_style: object | None = None,
 ) -> dict:
     # Convert input paths to Path objects
     zip_path = Path(zip_path)
@@ -268,6 +312,9 @@ def import_cad_zip(
 
     # Clean part name so it can safely be used in filenames
     part_name = safe_filename(part_name)
+
+    # Normalize optional symbol style settings
+    symbol_style = normalize_symbol_style(symbol_style)
 
     # Use same library name for symbols and footprints if specific names are not provided
     if symbol_library_name is None:
@@ -314,6 +361,7 @@ def import_cad_zip(
         "3d_path_fix": None,
         "library_table_update": None,
         "symbol_footprint_link": [],
+        "symbol_style_update": None,
         "backups": [],
         "skipped_existing": False,
         "existing_assets": {},
@@ -331,7 +379,20 @@ def import_cad_zip(
 
     if skip_existing_components and existing_assets.get("already_exists", False):
         imported["skipped_existing"] = True
+        apply_style_to_selected_symbols(
+            project_root=project_root,
+            symbol_library_path=paths["symbol_lib_path"],
+            symbol_style=symbol_style,
+            symbol_names=existing_assets.get("source_symbol_names", []),
+            backup_timestamp=backup_timestamp,
+            create_backups=create_backups,
+            imported=imported,
+        )
         imported["message"] = "Component already exists in the configured library. Import skipped."
+
+        if imported.get("symbol_style_update"):
+            imported["message"] += " Symbol style refreshed."
+
         return imported
 
     # Build target path for original source ZIP copy
@@ -512,6 +573,23 @@ def import_cad_zip(
 
                 # Store link result
                 imported["symbol_footprint_link"].append(link_result)
+
+    # Apply optional visual style only to symbols imported in this operation
+    if symbol_style is not None and selected_symbol_library_used:
+        merged_symbol_names = []
+
+        for merge_result in imported["merged_symbols"]:
+            merged_symbol_names.extend(merge_result.get("merged_symbol_names", []))
+
+        apply_style_to_selected_symbols(
+            project_root=project_root,
+            symbol_library_path=paths["symbol_lib_path"],
+            symbol_style=symbol_style,
+            symbol_names=merged_symbol_names,
+            backup_timestamp=backup_timestamp,
+            create_backups=create_backups,
+            imported=imported,
+        )
 
     # Fix 3D model paths in imported footprints if enabled
     if fix_3d_paths:

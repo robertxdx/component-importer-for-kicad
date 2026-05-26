@@ -28,12 +28,21 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 
 - Imports component ZIP files into project-local KiCad libraries.
 - Creates and registers symbol and footprint libraries for the project.
+- Automatically formats imported symbols so third-party parts use a cleaner KiCad-style body, fill, pin spacing, and pin length before they are added to the project library.
 - Copies 3D models, datasheets, source ZIPs, and metadata into organized folders.
 - Links imported symbols to their imported footprints automatically.
 - Watches a downloads folder and can auto-import new component ZIP files.
 - Can start automatically on login and stay minimized in the system tray.
 - Provides provider search links from inside the app.
 - Shows simple import confirmations and keeps detailed file backups automatically.
+
+## Automatic Symbol Formatting
+
+<p align="center">
+  <img src="docs/assets/symbol_formatting_comparison.png" alt="Imported symbol before and after automatic formatting" width="950">
+</p>
+
+When formatting is enabled, the importer cleans up supported symbols before adding components to the KiCad project library. It applies KiCad-style body outline and fill defaults, normalizes pin lengths, removes cramped pin-name offsets, and resizes rectangular symbols so imported parts are easier to read beside native KiCad symbols.
 
 ## Download
 

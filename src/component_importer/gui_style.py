@@ -93,6 +93,7 @@ def build_app_stylesheet() -> str:
 
     QLineEdit,
     QSpinBox,
+    QDoubleSpinBox,
     QTextEdit,
     QTextBrowser,
     QListWidget {{
@@ -136,7 +137,8 @@ def build_app_stylesheet() -> str:
         height: 14px;
     }}
 
-    QSpinBox {{
+    QSpinBox,
+    QDoubleSpinBox {{
         background: #ffffff;
         color: #1f1f1f;
         border: 1px solid #c8c8c8;
@@ -148,35 +150,43 @@ def build_app_stylesheet() -> str:
     }}
 
     QSpinBox::up-button,
-    QSpinBox::down-button {{
+    QSpinBox::down-button,
+    QDoubleSpinBox::up-button,
+    QDoubleSpinBox::down-button {{
         subcontrol-origin: border;
         width: 28px;
         border-left: 1px solid #d0d0d0;
         background: #f9f9f9;
     }}
 
-    QSpinBox::up-button {{
+    QSpinBox::up-button,
+    QDoubleSpinBox::up-button {{
         subcontrol-position: top right;
         border-top-right-radius: 6px;
     }}
 
-    QSpinBox::down-button {{
+    QSpinBox::down-button,
+    QDoubleSpinBox::down-button {{
         subcontrol-position: bottom right;
         border-bottom-right-radius: 6px;
     }}
 
     QSpinBox::up-button:hover,
-    QSpinBox::down-button:hover {{
+    QSpinBox::down-button:hover,
+    QDoubleSpinBox::up-button:hover,
+    QDoubleSpinBox::down-button:hover {{
         background: #eeeeee;
     }}
 
-    QSpinBox::up-arrow {{
+    QSpinBox::up-arrow,
+    QDoubleSpinBox::up-arrow {{
         image: url("{chevron_up_icon_url}");
         width: 14px;
         height: 14px;
     }}
 
-    QSpinBox::down-arrow {{
+    QSpinBox::down-arrow,
+    QDoubleSpinBox::down-arrow {{
         image: url("{chevron_icon_url}");
         width: 14px;
         height: 14px;
@@ -196,6 +206,7 @@ def build_app_stylesheet() -> str:
     QLineEdit:hover,
     QComboBox:hover,
     QSpinBox:hover,
+    QDoubleSpinBox:hover,
     QTextEdit:hover,
     QTextBrowser:hover,
     QListWidget:hover {{
@@ -205,6 +216,7 @@ def build_app_stylesheet() -> str:
     QLineEdit:focus,
     QComboBox:focus,
     QSpinBox:focus,
+    QDoubleSpinBox:focus,
     QTextEdit:focus,
     QTextBrowser:focus,
     QListWidget:focus {{

@@ -275,6 +275,26 @@
         margin-top: 22px;
       }
 
+      .feature-image {
+        margin-top: 28px;
+      }
+
+      .feature-image img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .feature-caption {
+        max-width: 860px;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
       code {
         font-family: "Cascadia Mono", Consolas, monospace;
         font-size: 0.95em;
@@ -394,6 +414,17 @@
             <p class="muted">Can watch a downloads folder and import new component ZIP files when they arrive.</p>
           </article>
         </div>
+      </section>
+
+      <section id="symbol-formatting">
+        <h2>Automatic symbol formatting</h2>
+        <p class="muted">Imported symbols can be cleaned up before they are added to the project library.</p>
+        <figure class="feature-image">
+          <img src="assets/symbol_formatting_comparison.png" alt="Imported symbol before and after automatic formatting">
+          <figcaption class="feature-caption">
+            The importer automatically formats supported symbols before importing components, applying KiCad-style body fill and outline defaults, normalizing pin lengths, removing cramped pin-name offsets, and resizing rectangular symbols so third-party parts are easier to read beside native KiCad symbols.
+          </figcaption>
+        </figure>
       </section>
 
       <section id="first-use">

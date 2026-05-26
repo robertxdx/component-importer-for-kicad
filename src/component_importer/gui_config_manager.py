@@ -13,6 +13,10 @@ from dataclasses import field
 # Import Path for filesystem paths
 from pathlib import Path
 
+# Import ZipFile to inspect downloaded ZIP symbol names when available
+from zipfile import BadZipFile
+from zipfile import ZipFile
+
 # Import json for reading and writing config files
 import json
 
@@ -23,6 +27,17 @@ import re
 from component_importer.app_paths import default_downloads_dir
 from component_importer.app_paths import gui_config_file_path
 from component_importer.library_table_updater import make_library_nickname
+from component_importer.models import AssetType
+from component_importer.symbol_footprint_linker import find_symbol_blocks
+from component_importer.symbol_style import KICAD_DEFAULT_BODY_LINE_WIDTH_MM
+from component_importer.symbol_style import KICAD_DEFAULT_BODY_COLOR
+from component_importer.symbol_style import KICAD_DEFAULT_FILL_MODE
+from component_importer.symbol_style import KICAD_DEFAULT_FILL_COLOR
+from component_importer.symbol_style import SymbolStyle
+from component_importer.symbol_style import normalize_fill_mode
+from component_importer.symbol_style import normalize_float
+from component_importer.symbol_style import normalize_hex_color
+from component_importer.zip_scanner import scan_cad_zip
 
 
 # Default config file
@@ -69,6 +84,24 @@ class GuiConfig:
     # Start the app automatically when the user signs in, where supported
     start_with_windows: bool = False
 
+    # Apply formatting to imported KiCad symbols
+    symbol_style_enabled: bool = True
+
+    # Imported symbol graphic line width in millimeters
+    symbol_line_width_mm: float = KICAD_DEFAULT_BODY_LINE_WIDTH_MM
+
+    # Imported symbol graphic stroke color
+    symbol_line_color: str = KICAD_DEFAULT_BODY_COLOR
+
+    # Imported symbol fill mode: keep, kicad_default, or color
+    symbol_fill_mode: str = KICAD_DEFAULT_FILL_MODE
+
+    # Imported symbol custom fill color, used when symbol_fill_mode is color
+    symbol_fill_color: str = KICAD_DEFAULT_FILL_COLOR
+
+    # Imported symbol text height/width in millimeters
+    symbol_font_size_mm: float = 1.27
+
     # Keep one user-facing library name for both symbol and footprint libraries
     def __post_init__(self) -> None:
         shared_library_name = (
@@ -83,6 +116,28 @@ class GuiConfig:
         self.library_name = shared_library_name
         self.symbol_library_name = shared_library_name
         self.footprint_library_name = shared_library_name
+        self.symbol_style_enabled = bool(self.symbol_style_enabled)
+        self.symbol_line_width_mm = normalize_float(
+            self.symbol_line_width_mm,
+            fallback=KICAD_DEFAULT_BODY_LINE_WIDTH_MM,
+            minimum=0.0,
+            maximum=5.0,
+        )
+        self.symbol_line_color = normalize_hex_color(self.symbol_line_color)
+        self.symbol_fill_mode = normalize_fill_mode(
+            self.symbol_fill_mode,
+            fallback=KICAD_DEFAULT_FILL_MODE,
+        )
+        self.symbol_fill_color = normalize_hex_color(
+            self.symbol_fill_color,
+            fallback=KICAD_DEFAULT_FILL_COLOR,
+        )
+        self.symbol_font_size_mm = normalize_float(
+            self.symbol_font_size_mm,
+            fallback=1.27,
+            minimum=0.1,
+            maximum=20.0,
+        )
 
 
 # Convert a dictionary to GuiConfig with safe defaults
@@ -177,6 +232,20 @@ def save_gui_config(config: GuiConfig, config_path: str | Path = CONFIG_FILE) ->
     temp_path.replace(config_path)
 
 
+# Convert GUI style settings to the backend symbol style object
+def build_symbol_style_from_config(config: GuiConfig) -> SymbolStyle | None:
+    if not config.symbol_style_enabled:
+        return None
+
+    return SymbolStyle(
+        line_width_mm=config.symbol_line_width_mm,
+        line_color=config.symbol_line_color,
+        fill_mode=config.symbol_fill_mode,
+        fill_color=config.symbol_fill_color,
+        font_size_mm=config.symbol_font_size_mm,
+    )
+
+
 # Make a string safe for filenames and simple part names
 def safe_name(value: str) -> str:
     # Replace invalid characters with underscore
@@ -193,46 +262,83 @@ def safe_name(value: str) -> str:
     return value
 
 
-# Infer part name from a downloaded ZIP filename
-def infer_part_name_from_zip(zip_path: str | Path) -> str:
-    # Convert path to Path object
+# Try to infer the part name from the KiCad symbol name inside a ZIP
+def infer_part_name_from_zip_symbols(zip_path: str | Path) -> str:
     zip_path = Path(zip_path)
 
-    # Get filename without extension
-    stem = zip_path.stem
+    try:
+        assets = scan_cad_zip(zip_path)
 
-    # Split filename into tokens
-    tokens = re.split(r"[^A-Za-z0-9]+", stem)
+        with ZipFile(zip_path, "r") as zf:
+            for asset in assets:
+                if asset.asset_type != AssetType.SYMBOL_LIB:
+                    continue
 
-    # Ignore generic provider/file tokens
-    ignored_tokens = {
-        "LIB",
-        "UL",
-        "KICAD",
-        "KI",
-        "CAD",
-        "MODEL",
-        "MODELS",
-        "SYMBOL",
-        "FOOTPRINT",
-        "FOOTPRINTS",
-        "DOWNLOAD",
-        "EXPORT",
-    }
+                with zf.open(asset.original_path.as_posix()) as src:
+                    content = src.read().decode("utf-8", errors="ignore")
 
-    # Keep useful tokens
-    candidates = [
-        token
-        for token in tokens
-        if len(token) >= 4 and token.upper() not in ignored_tokens
-    ]
+                for block in find_symbol_blocks(content):
+                    symbol_name = clean_config_text(block.get("name", ""))
 
-    # Prefer the last useful token
-    if candidates:
-        return safe_name(candidates[-1])
+                    if symbol_name:
+                        return safe_name(symbol_name)
 
-    # Fallback to cleaned filename stem
+    except (BadZipFile, KeyError, OSError, ValueError):
+        return ""
+
+    return ""
+
+
+# Infer a useful part name from a ZIP filename without splitting on part dots
+def infer_part_name_from_zip_filename(zip_path: str | Path) -> str:
+    zip_path = Path(zip_path)
+    stem = zip_path.stem.strip()
+
+    # Drop browser duplicate suffixes like " (1)" before cleanup
+    stem = re.sub(r"\s+\(\d+\)$", "", stem).strip()
+
+    generic_word = (
+        r"lib|ul|kicad|ki[-_\s]*cad|cad|model|models|symbol|symbols|"
+        r"footprint|footprints|download|export"
+    )
+
+    # Strip common provider prefixes while preserving dots and dashes in parts
+    while True:
+        cleaned = re.sub(
+            rf"(?i)^(?:{generic_word})[\s_.-]+",
+            "",
+            stem,
+        ).strip()
+
+        if cleaned == stem:
+            break
+
+        stem = cleaned
+
+    # Strip common provider suffixes if a vendor adds them after the part name
+    while True:
+        cleaned = re.sub(
+            rf"(?i)[\s_.-]+(?:{generic_word})$",
+            "",
+            stem,
+        ).strip()
+
+        if cleaned == stem:
+            break
+
+        stem = cleaned
+
     return safe_name(stem)
+
+
+# Infer part name from a downloaded ZIP
+def infer_part_name_from_zip(zip_path: str | Path) -> str:
+    symbol_name = infer_part_name_from_zip_symbols(zip_path)
+
+    if symbol_name:
+        return symbol_name
+
+    return infer_part_name_from_zip_filename(zip_path)
 
 
 # Validate basic config values
