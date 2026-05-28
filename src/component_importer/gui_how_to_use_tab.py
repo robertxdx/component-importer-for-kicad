@@ -57,6 +57,16 @@ class HowToUseTab(QWidget):
 
             <h3>Step 5.</h3>
             <p>
+              Go to the <b>Symbol Style</b> tab and choose whether imports
+              should be formatted. When <b>Apply formatting</b> is checked, the
+              app cleans up supported symbols before adding them to the KiCad
+              library. When it is unchecked, symbols are imported as they came
+              from the provider ZIP. Symbol style changes are saved
+              automatically.
+            </p>
+
+            <h3>Step 6.</h3>
+            <p>
               Open KiCad again and open the schematic. The project libraries
               are now already registered before KiCad loads the project.
             </p>
@@ -73,6 +83,9 @@ class HowToUseTab(QWidget):
             <p>
               Import the ZIP. Click a ZIP entry in the Import ZIP tab to put it
               in the <b>Component ZIP</b> box, then click <b>Import ZIP</b>.
+              If <b>Apply formatting</b> is enabled in the Symbol Style tab,
+              the symbol is cleaned up during import. If it is disabled, the
+              symbol is merged as-is.
             </p>
 
             <h3>Step 3.</h3>
@@ -96,13 +109,39 @@ class HowToUseTab(QWidget):
               When a new ZIP appears, the app waits briefly for the download to
               finish, names the component from the ZIP filename, imports it into
               the configured library, creates backups, and shows a confirmation
-              popup when the import finishes.
+              popup when the import finishes. Automatic imports use the current
+              Symbol Style setting the same way manual imports do.
             </p>
 
             <p>
               If the same component is already present in the configured
               library, the app skips the import so duplicate KiCad entries are
-              not created.
+              not created. If <b>Apply formatting</b> is enabled, the app can
+              refresh the existing symbol style without creating another copy of
+              the component.
+            </p>
+
+            <h2>Symbol formatting</h2>
+
+            <p>
+              The <b>Symbol Style</b> tab controls how supported imported
+              symbols are cleaned up before they are written into the project
+              symbol library. The preview updates live so you can see the
+              general result before importing.
+            </p>
+
+            <p>
+              Formatting can apply KiCad-style body outline and fill colors,
+              normalize text size, remove cramped custom pin-name offsets,
+              resize simple rectangular symbols to reduce empty space, and set
+              standard pin lengths. Smaller symbols use 100 mil pins. Symbols
+              with more than 9 pins use 200 mil pins.
+            </p>
+
+            <p>
+              KiCad does not safely store separate colors for pin names, pin
+              numbers, font text, or pin lines in symbol library files, so those
+              colors follow the KiCad editor color theme.
             </p>
 
             <p>
@@ -153,6 +192,17 @@ class HowToUseTab(QWidget):
               <li><b>ZIP list</b>: updates when the watch folder changes; click a ZIP to copy it into the Component ZIP field.</li>
             </ul>
 
+            <h3>Symbol Style tab</h3>
+            <ul>
+              <li><b>Apply formatting</b>: when checked, supported imported symbols are cleaned up before they are saved to the KiCad library; when unchecked, symbols are imported as-is.</li>
+              <li><b>Body line width</b>: outline width used for formatted symbol bodies.</li>
+              <li><b>Body line color</b>: outline color used for formatted symbol bodies.</li>
+              <li><b>Fill</b>: choose <b>Component default</b>, <b>KiCad default</b>, or <b>Custom</b>.</li>
+              <li><b>Custom fill color</b>: fill color used only when <b>Custom</b> is selected.</li>
+              <li><b>Text size</b>: text size applied to supported symbol text during formatting.</li>
+              <li><b>Preview</b>: live generic preview of the selected style. The exact imported component may differ depending on its original symbol shape.</li>
+            </ul>
+
             <h3>Search tab</h3>
             <ul>
               <li><b>Search text</b>: MPN or component keyword.</li>
@@ -170,6 +220,7 @@ class HowToUseTab(QWidget):
               <li>For automatic import, minimize the app or press <b>X</b> to keep it running in the tray. To stop the app, right-click the tray icon and choose <b>Exit</b>.</li>
               <li>When an import succeeds, the app shows a confirmation popup with the component and library name.</li>
               <li>Saved configuration is loaded automatically when the app starts. Save again only after changing configuration values.</li>
+              <li>Symbol style changes are saved automatically when changed.</li>
               <li>For first use, configure and save this app before opening KiCad so KiCad loads the project libraries from the start.</li>
               <li>If a KiCad chooser was already open during import, close and reopen only that chooser to refresh its view.</li>
               <li>The app imports libraries. It does not automatically place a new symbol onto the schematic.</li>

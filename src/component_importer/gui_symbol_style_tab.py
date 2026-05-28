@@ -29,8 +29,6 @@ from component_importer.gui_config_manager import GuiConfig
 from component_importer.gui_config_manager import save_gui_config
 from component_importer.symbol_style import KICAD_DEFAULT_FILL_MODE
 from component_importer.symbol_style import KICAD_DEFAULT_FILL_COLOR
-from component_importer.symbol_style import KICAD_DENSE_SYMBOL_PIN_COUNT_THRESHOLD
-from component_importer.symbol_style import KICAD_DENSE_SYMBOL_PIN_LENGTH_MM
 from component_importer.symbol_style import KICAD_DEFAULT_PIN_LENGTH_MM
 from component_importer.symbol_style import KICAD_DEFAULT_PIN_NUMBER_COLOR
 from component_importer.symbol_style import KICAD_DEFAULT_TEXT_COLOR
@@ -40,6 +38,11 @@ from component_importer.symbol_style import normalize_hex_color
 
 # Draw a basic schematic symbol preview from the configured style
 class SymbolPreview(QWidget):
+    BODY_LEFT_X = -6.6
+    BODY_RIGHT_X = 6.6
+    BODY_TOP_Y = 5.8
+    BODY_BOTTOM_Y = -5.8
+
     # Create preview
     def __init__(self, config: GuiConfig):
         super().__init__()
@@ -76,14 +79,14 @@ class SymbolPreview(QWidget):
             line_color = QColor(normalize_hex_color(self.config.symbol_line_color))
             line_width = max(1.0, self.config.symbol_line_width_mm * scale)
             line_pen = QPen(line_color, line_width)
-            line_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            line_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            line_pen.setCapStyle(Qt.PenCapStyle.FlatCap)
+            line_pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
             painter.setPen(line_pen)
 
             fill_mode = normalize_fill_mode(self.config.symbol_fill_mode)
             body = QRectF(
-                self.point(center, scale, -10.0, 7.5),
-                self.point(center, scale, 10.0, -8.0),
+                self.point(center, scale, self.BODY_LEFT_X, self.BODY_TOP_Y),
+                self.point(center, scale, self.BODY_RIGHT_X, self.BODY_BOTTOM_Y),
             ).normalized()
 
             if fill_mode == "kicad_default":
@@ -123,27 +126,26 @@ class SymbolPreview(QWidget):
         painter.setBrush(Qt.BrushStyle.NoBrush)
         pin_line_color = QColor(KICAD_DEFAULT_PIN_NUMBER_COLOR)
         pin_pen = QPen(pin_line_color, max(1.0, 0.127 * scale))
-        pin_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pin_pen.setCapStyle(Qt.PenCapStyle.FlatCap)
         painter.setPen(pin_pen)
 
         pin_rows = [
-            (5.8, "IN1", "1", "OUT1", "14"),
-            (3.9, "IN2", "2", "OUT2", "13"),
-            (2.0, "IN3", "3", "OUT3", "12"),
-            (0.1, "IN4", "4", "OUT4", "11"),
-            (-1.8, "EN", "5", "READY", "10"),
-            (-3.7, "VCC", "6", "FAULT", "9"),
-            (-5.6, "GND", "7", "GND", "8"),
+            (4.5, "IN1", "1", "OUT1", "14"),
+            (3.0, "IN2", "2", "OUT2", "13"),
+            (1.5, "IN3", "3", "OUT3", "12"),
+            (0.0, "IN4", "4", "OUT4", "11"),
+            (-1.5, "EN", "5", "READY", "10"),
+            (-3.0, "VCC", "6", "FAULT", "9"),
+            (-4.5, "GND", "7", "GND", "8"),
         ]
-        body_left_x = -10.0
-        body_right_x = 10.0
-        pin_length = KICAD_DENSE_SYMBOL_PIN_LENGTH_MM
-
-        if len(pin_rows) * 2 <= KICAD_DENSE_SYMBOL_PIN_COUNT_THRESHOLD:
-            pin_length = KICAD_DEFAULT_PIN_LENGTH_MM
-
+        body_left_x = self.BODY_LEFT_X
+        body_right_x = self.BODY_RIGHT_X
+        pin_length = KICAD_DEFAULT_PIN_LENGTH_MM
         left_pin_outer_x = body_left_x - pin_length
         right_pin_outer_x = body_right_x + pin_length
+        left_number_x = body_left_x - (pin_length * 0.52)
+        right_number_x = body_right_x + (pin_length * 0.52)
+        pin_number_y_offset = 0.56
 
         pin_name_color = QColor(KICAD_DEFAULT_TEXT_COLOR)
         pin_number_color = QColor(KICAD_DEFAULT_PIN_NUMBER_COLOR)
@@ -162,41 +164,47 @@ class SymbolPreview(QWidget):
                 painter,
                 center,
                 scale,
-                body_left_x + 0.8,
+                body_left_x + 0.42,
                 y,
                 left_name,
                 pin_name_color,
                 Qt.AlignmentFlag.AlignLeft,
+                width=62,
             )
             self.draw_pin_label(
                 painter,
                 center,
                 scale,
-                left_pin_outer_x - 1.05,
-                y,
+                left_number_x,
+                y + pin_number_y_offset,
                 left_number,
                 pin_number_color,
-                Qt.AlignmentFlag.AlignRight,
+                Qt.AlignmentFlag.AlignHCenter,
+                width=28,
+                height=18,
             )
             self.draw_pin_label(
                 painter,
                 center,
                 scale,
-                body_right_x - 0.8,
+                body_right_x - 0.42,
                 y,
                 right_name,
                 pin_name_color,
                 Qt.AlignmentFlag.AlignRight,
+                width=62,
             )
             self.draw_pin_label(
                 painter,
                 center,
                 scale,
-                right_pin_outer_x + 1.05,
-                y,
+                right_number_x,
+                y + pin_number_y_offset,
                 right_number,
                 pin_number_color,
-                Qt.AlignmentFlag.AlignLeft,
+                Qt.AlignmentFlag.AlignHCenter,
+                width=28,
+                height=18,
             )
 
     # Draw a small pin label
@@ -210,18 +218,23 @@ class SymbolPreview(QWidget):
         text: str,
         color: QColor,
         alignment: Qt.AlignmentFlag,
+        width: int = 54,
+        height: int = 22,
     ) -> None:
         painter.save()
         painter.setPen(color)
         font = painter.font()
-        font.setPixelSize(max(9, int(self.config.symbol_font_size_mm * scale * 0.72)))
+        font.setPixelSize(max(9, int(self.config.symbol_font_size_mm * scale * 0.78)))
         painter.setFont(font)
 
         anchor = self.point(center, scale, x, y)
+
         if alignment == Qt.AlignmentFlag.AlignRight:
-            box = QRectF(anchor.x() - 54, anchor.y() - 11, 52, 22)
+            box = QRectF(anchor.x() - width, anchor.y() - (height / 2), width, height)
+        elif alignment == Qt.AlignmentFlag.AlignHCenter:
+            box = QRectF(anchor.x() - (width / 2), anchor.y() - (height / 2), width, height)
         else:
-            box = QRectF(anchor.x() + 2, anchor.y() - 11, 54, 22)
+            box = QRectF(anchor.x(), anchor.y() - (height / 2), width, height)
 
         painter.drawText(
             box,
