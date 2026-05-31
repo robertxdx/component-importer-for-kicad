@@ -27,6 +27,10 @@ VALID_FILL_MODES = {
     "outline",
     "background",
 }
+VALID_SYMBOL_STYLE_PRESETS = {
+    "kicad_default",
+    "custom",
+}
 KICAD_DEFAULT_BODY_LINE_WIDTH_MM = 0.254
 KICAD_DEFAULT_BODY_COLOR = "#840000"
 KICAD_DEFAULT_TEXT_COLOR = "#006464"
@@ -42,6 +46,7 @@ KICAD_PIN_NAME_TEXT_WIDTH_FACTOR = 0.8
 KICAD_SYMBOL_GRID_MM = 2.54
 KICAD_DEFAULT_FILL_COLOR = "#FFFFC2"
 KICAD_DEFAULT_FILL_MODE = "kicad_default"
+KICAD_DEFAULT_SYMBOL_STYLE_PRESET = "kicad_default"
 NUMBER_PATTERN = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
 
 
@@ -116,6 +121,18 @@ def normalize_fill_mode(
 
     if fill_mode in VALID_FILL_MODES:
         return fill_mode
+
+    return fallback
+
+
+def normalize_symbol_style_preset(
+    value: object,
+    fallback: str = KICAD_DEFAULT_SYMBOL_STYLE_PRESET,
+) -> str:
+    preset = re.sub(r"[\s-]+", "_", str(value or "").strip().lower())
+
+    if preset in VALID_SYMBOL_STYLE_PRESETS:
+        return preset
 
     return fallback
 

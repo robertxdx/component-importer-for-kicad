@@ -211,6 +211,7 @@ class ConfigTab(QWidget):
             auto_import_enabled=self.auto_import_checkbox.isChecked(),
             start_with_windows=self.start_with_windows_checkbox.isChecked(),
             symbol_style_enabled=self.config.symbol_style_enabled,
+            symbol_style_preset=self.config.symbol_style_preset,
             symbol_line_width_mm=self.config.symbol_line_width_mm,
             symbol_line_color=self.config.symbol_line_color,
             symbol_fill_mode=self.config.symbol_fill_mode,

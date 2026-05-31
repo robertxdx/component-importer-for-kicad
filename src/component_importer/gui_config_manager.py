@@ -33,10 +33,12 @@ from component_importer.symbol_style import KICAD_DEFAULT_BODY_LINE_WIDTH_MM
 from component_importer.symbol_style import KICAD_DEFAULT_BODY_COLOR
 from component_importer.symbol_style import KICAD_DEFAULT_FILL_MODE
 from component_importer.symbol_style import KICAD_DEFAULT_FILL_COLOR
+from component_importer.symbol_style import KICAD_DEFAULT_SYMBOL_STYLE_PRESET
 from component_importer.symbol_style import SymbolStyle
 from component_importer.symbol_style import normalize_fill_mode
 from component_importer.symbol_style import normalize_float
 from component_importer.symbol_style import normalize_hex_color
+from component_importer.symbol_style import normalize_symbol_style_preset
 from component_importer.zip_scanner import scan_cad_zip
 
 
@@ -87,16 +89,19 @@ class GuiConfig:
     # Apply formatting to imported KiCad symbols
     symbol_style_enabled: bool = True
 
+    # Symbol formatting preset: kicad_default or custom
+    symbol_style_preset: str = KICAD_DEFAULT_SYMBOL_STYLE_PRESET
+
     # Imported symbol graphic line width in millimeters
     symbol_line_width_mm: float = KICAD_DEFAULT_BODY_LINE_WIDTH_MM
 
     # Imported symbol graphic stroke color
     symbol_line_color: str = KICAD_DEFAULT_BODY_COLOR
 
-    # Imported symbol fill mode: keep, kicad_default, or color
+    # Imported symbol fill mode written by the selected preset
     symbol_fill_mode: str = KICAD_DEFAULT_FILL_MODE
 
-    # Imported symbol custom fill color, used when symbol_fill_mode is color
+    # Imported symbol fill color, used when the preset is custom
     symbol_fill_color: str = KICAD_DEFAULT_FILL_COLOR
 
     # Imported symbol text height/width in millimeters
@@ -117,13 +122,20 @@ class GuiConfig:
         self.symbol_library_name = shared_library_name
         self.footprint_library_name = shared_library_name
         self.symbol_style_enabled = bool(self.symbol_style_enabled)
+        self.symbol_style_preset = normalize_symbol_style_preset(
+            self.symbol_style_preset,
+            fallback=KICAD_DEFAULT_SYMBOL_STYLE_PRESET,
+        )
         self.symbol_line_width_mm = normalize_float(
             self.symbol_line_width_mm,
             fallback=KICAD_DEFAULT_BODY_LINE_WIDTH_MM,
             minimum=0.0,
             maximum=5.0,
         )
-        self.symbol_line_color = normalize_hex_color(self.symbol_line_color)
+        self.symbol_line_color = normalize_hex_color(
+            self.symbol_line_color,
+            fallback=KICAD_DEFAULT_BODY_COLOR,
+        )
         self.symbol_fill_mode = normalize_fill_mode(
             self.symbol_fill_mode,
             fallback=KICAD_DEFAULT_FILL_MODE,
@@ -138,6 +150,13 @@ class GuiConfig:
             minimum=0.1,
             maximum=20.0,
         )
+
+        if self.symbol_style_preset == "kicad_default":
+            self.symbol_line_color = KICAD_DEFAULT_BODY_COLOR
+            self.symbol_fill_mode = KICAD_DEFAULT_FILL_MODE
+            self.symbol_fill_color = KICAD_DEFAULT_FILL_COLOR
+        else:
+            self.symbol_fill_mode = "color"
 
 
 # Convert a dictionary to GuiConfig with safe defaults
@@ -173,6 +192,9 @@ def config_from_dict(data: dict) -> GuiConfig:
     # Backups are intentionally always enabled, even for older config files
     default_data["create_backups"] = True
 
+    if "symbol_style_preset" not in data:
+        default_data["symbol_style_preset"] = infer_symbol_style_preset(default_data)
+
     # Ignore keys from older versions of the GUI config
     allowed_keys = {field.name for field in fields(GuiConfig)}
     default_data = {
@@ -183,6 +205,31 @@ def config_from_dict(data: dict) -> GuiConfig:
 
     # Return config object
     return GuiConfig(**default_data)
+
+
+# Infer the new preset from older line/fill style fields
+def infer_symbol_style_preset(data: dict) -> str:
+    line_color = normalize_hex_color(
+        data.get("symbol_line_color"),
+        fallback=KICAD_DEFAULT_BODY_COLOR,
+    )
+    fill_mode = normalize_fill_mode(
+        data.get("symbol_fill_mode"),
+        fallback=KICAD_DEFAULT_FILL_MODE,
+    )
+    fill_color = normalize_hex_color(
+        data.get("symbol_fill_color"),
+        fallback=KICAD_DEFAULT_FILL_COLOR,
+    )
+
+    if (
+        line_color == KICAD_DEFAULT_BODY_COLOR
+        and fill_mode == KICAD_DEFAULT_FILL_MODE
+        and fill_color == KICAD_DEFAULT_FILL_COLOR
+    ):
+        return KICAD_DEFAULT_SYMBOL_STYLE_PRESET
+
+    return "custom"
 
 
 # Load GUI config from disk

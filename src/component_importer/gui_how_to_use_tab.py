@@ -59,7 +59,7 @@ class HowToUseTab(QWidget):
             <p>
               Go to the <b>Symbol Style</b> tab and choose whether imports
               should be formatted. When <b>Apply formatting</b> is checked, the
-              app cleans up supported symbols before adding them to the KiCad
+              app formats imported symbols before adding them to the KiCad
               library. When it is unchecked, symbols are imported as they came
               from the provider ZIP. Symbol style changes are saved
               automatically.
@@ -124,18 +124,19 @@ class HowToUseTab(QWidget):
             <h2>Symbol formatting</h2>
 
             <p>
-              The <b>Symbol Style</b> tab controls how supported imported
-              symbols are cleaned up before they are written into the project
-              symbol library. The preview updates live so you can see the
+              The <b>Symbol Style</b> tab controls how imported symbols are
+              cleaned up before they are written into the project symbol
+              library. The preview updates live so you can see the
               general result before importing.
             </p>
 
             <p>
               Formatting can apply KiCad-style body outline and fill colors,
               normalize text size, remove cramped custom pin-name offsets,
-              resize simple rectangular symbols to reduce empty space, and set
-              standard pin lengths. Smaller symbols use 100 mil pins. Symbols
-              with more than 9 pins use 200 mil pins.
+              set standard pin lengths, and apply geometry-aware cleanup. For
+              example, simple rectangular symbols can be resized to reduce empty
+              space. Smaller symbols use 100 mil pins. Symbols with more than
+              9 pins use 200 mil pins.
             </p>
 
             <p>
@@ -194,12 +195,12 @@ class HowToUseTab(QWidget):
 
             <h3>Symbol Style tab</h3>
             <ul>
-              <li><b>Apply formatting</b>: when checked, supported imported symbols are cleaned up before they are saved to the KiCad library; when unchecked, symbols are imported as-is.</li>
+              <li><b>Apply formatting</b>: when checked, imported symbols are cleaned up before they are saved to the KiCad library; when unchecked, symbols are imported as-is.</li>
+              <li><b>Preset</b>: choose <b>KiCad default</b> colors or <b>Custom</b>.</li>
               <li><b>Body line width</b>: outline width used for formatted symbol bodies.</li>
-              <li><b>Body line color</b>: outline color used for formatted symbol bodies.</li>
-              <li><b>Fill</b>: choose <b>Component default</b>, <b>KiCad default</b>, or <b>Custom</b>.</li>
-              <li><b>Custom fill color</b>: fill color used only when <b>Custom</b> is selected.</li>
-              <li><b>Text size</b>: text size applied to supported symbol text during formatting.</li>
+              <li><b>Body line color</b>: outline color used for formatted symbol bodies; changing it switches the preset to <b>Custom</b>.</li>
+              <li><b>Body fill color</b>: fill color used for formatted symbol bodies; changing it switches the preset to <b>Custom</b>.</li>
+              <li><b>Text size</b>: text size applied to symbol text during formatting.</li>
               <li><b>Preview</b>: live generic preview of the selected style. The exact imported component may differ depending on its original symbol shape.</li>
             </ul>
 

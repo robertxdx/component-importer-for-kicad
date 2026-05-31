@@ -6,10 +6,6 @@ An open source desktop app for importing downloaded component ZIP libraries into
   <img src="docs/assets/github_header.png" alt="Auto-importer for KiCad" width="950">
 </p>
 
-<p align="center">
-  <img src="docs/assets/configuration.png" alt="Configuration tab" width="950">
-</p>
-
 Linux support is available for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions. See [Linux support notes](docs/LINUX.md).
 
 See the [installation guide](docs/INSTALL.md) for Windows and Linux setup steps.
@@ -42,7 +38,7 @@ It is designed for workflows where you download component ZIP files from CAD/lib
   <img src="docs/assets/symbol_formatting_comparison.png" alt="Imported symbol before and after automatic formatting" width="950">
 </p>
 
-When formatting is enabled, the importer cleans up supported symbols before adding components to the KiCad project library. It applies KiCad-style body outline and fill defaults, normalizes pin lengths, removes cramped pin-name offsets, and resizes rectangular symbols so imported parts are easier to read beside native KiCad symbols.
+When formatting is enabled, the importer formats imported symbols before adding components to the KiCad project library. It applies KiCad-style body outline and fill defaults, normalizes pin lengths, removes cramped pin-name offsets, and applies geometry-aware cleanup such as resizing simple rectangular symbols so third-party parts are easier to read beside native KiCad symbols.
 
 ## Download
 

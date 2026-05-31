@@ -274,7 +274,10 @@ class MainWindow(QMainWindow):
         self.config = config
 
         # Save config
-        save_gui_config(config)
+        try:
+            save_gui_config(config)
+        except Exception as error:
+            self.log(f"Configuration save error: {error}")
 
         # Ensure libraries are created and registered as soon as config is valid
         self.prepare_project_libraries(show_log=show_log)

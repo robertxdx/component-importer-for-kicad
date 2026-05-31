@@ -26,14 +26,16 @@ from PyQt6.QtWidgets import QWidget
 
 # Import config helpers
 from component_importer.gui_config_manager import GuiConfig
-from component_importer.gui_config_manager import save_gui_config
+from component_importer.symbol_style import KICAD_DEFAULT_BODY_COLOR
 from component_importer.symbol_style import KICAD_DEFAULT_FILL_MODE
 from component_importer.symbol_style import KICAD_DEFAULT_FILL_COLOR
 from component_importer.symbol_style import KICAD_DEFAULT_PIN_LENGTH_MM
 from component_importer.symbol_style import KICAD_DEFAULT_PIN_NUMBER_COLOR
+from component_importer.symbol_style import KICAD_DEFAULT_SYMBOL_STYLE_PRESET
 from component_importer.symbol_style import KICAD_DEFAULT_TEXT_COLOR
 from component_importer.symbol_style import normalize_fill_mode
 from component_importer.symbol_style import normalize_hex_color
+from component_importer.symbol_style import normalize_symbol_style_preset
 
 
 # Draw a basic schematic symbol preview from the configured style
@@ -333,6 +335,10 @@ class SymbolStyleTab(QWidget):
 
         self.apply_formatting_checkbox = QCheckBox("Apply formatting")
 
+        self.symbol_style_preset_combo = QComboBox()
+        self.symbol_style_preset_combo.addItem("KiCad default", "kicad_default")
+        self.symbol_style_preset_combo.addItem("Custom", "custom")
+
         self.symbol_line_width_spin = QDoubleSpinBox()
         self.symbol_line_width_spin.setRange(0.0, 5.0)
         self.symbol_line_width_spin.setDecimals(3)
@@ -341,11 +347,6 @@ class SymbolStyleTab(QWidget):
 
         self.symbol_line_color_button = QPushButton()
         self.symbol_line_color_button.setMinimumWidth(120)
-
-        self.symbol_fill_mode_combo = QComboBox()
-        self.symbol_fill_mode_combo.addItem("Component default", "keep")
-        self.symbol_fill_mode_combo.addItem("KiCad default", "kicad_default")
-        self.symbol_fill_mode_combo.addItem("Custom", "color")
 
         self.symbol_fill_color_button = QPushButton()
         self.symbol_fill_color_button.setMinimumWidth(120)
@@ -357,18 +358,18 @@ class SymbolStyleTab(QWidget):
         self.symbol_font_size_spin.setSuffix(" mm")
 
         self.formatting_controls = [
+            self.symbol_style_preset_combo,
             self.symbol_line_width_spin,
             self.symbol_line_color_button,
-            self.symbol_fill_mode_combo,
             self.symbol_fill_color_button,
             self.symbol_font_size_spin,
         ]
 
         form_layout.addRow("", self.apply_formatting_checkbox)
+        form_layout.addRow("Preset:", self.symbol_style_preset_combo)
         form_layout.addRow("Body line width:", self.symbol_line_width_spin)
         form_layout.addRow("Body line color:", self.symbol_line_color_button)
-        form_layout.addRow("Fill:", self.symbol_fill_mode_combo)
-        form_layout.addRow("Custom fill color:", self.symbol_fill_color_button)
+        form_layout.addRow("Body fill color:", self.symbol_fill_color_button)
         form_layout.addRow("Text size:", self.symbol_font_size_spin)
 
         controls_layout.addLayout(form_layout)
@@ -399,7 +400,9 @@ class SymbolStyleTab(QWidget):
         self.preview_update_timer.timeout.connect(self.update_preview_from_fields)
 
         self.apply_formatting_checkbox.stateChanged.connect(self.on_style_changed)
-        self.symbol_fill_mode_combo.currentIndexChanged.connect(self.on_style_changed)
+        self.symbol_style_preset_combo.currentIndexChanged.connect(
+            self.on_preset_changed
+        )
 
         for spin_box in [
             self.symbol_line_width_spin,
@@ -412,23 +415,48 @@ class SymbolStyleTab(QWidget):
         self.loading_config = True
 
         self.apply_formatting_checkbox.setChecked(self.config.symbol_style_enabled)
+        self.set_symbol_style_preset(self.config.symbol_style_preset)
         self.symbol_line_width_spin.setValue(self.config.symbol_line_width_mm)
         self.set_symbol_line_color(self.config.symbol_line_color)
         self.set_symbol_fill_color(self.config.symbol_fill_color)
-
-        fill_mode = normalize_fill_mode(self.config.symbol_fill_mode)
-        fill_index = self.symbol_fill_mode_combo.findData(fill_mode)
-        if fill_index >= 0:
-            self.symbol_fill_mode_combo.setCurrentIndex(fill_index)
-        else:
-            self.symbol_fill_mode_combo.setCurrentIndex(0)
 
         self.symbol_font_size_spin.setValue(self.config.symbol_font_size_mm)
 
         self.loading_config = False
         self.update_formatting_controls_enabled()
-        self.update_fill_color_enabled()
         self.update_preview_from_fields()
+
+    # Return selected symbol style preset
+    def current_symbol_style_preset(self) -> str:
+        return normalize_symbol_style_preset(
+            self.symbol_style_preset_combo.currentData(),
+            fallback=KICAD_DEFAULT_SYMBOL_STYLE_PRESET,
+        )
+
+    # Set preset combo without triggering change handlers
+    def set_symbol_style_preset(self, preset: str) -> None:
+        preset = normalize_symbol_style_preset(preset)
+        index = self.symbol_style_preset_combo.findData(preset)
+
+        if index < 0:
+            index = self.symbol_style_preset_combo.findData(
+                KICAD_DEFAULT_SYMBOL_STYLE_PRESET
+            )
+
+        signals_were_blocked = self.symbol_style_preset_combo.blockSignals(True)
+        self.symbol_style_preset_combo.setCurrentIndex(max(index, 0))
+        self.symbol_style_preset_combo.blockSignals(signals_were_blocked)
+
+    # Apply selected preset values
+    def on_preset_changed(self, *args) -> None:
+        if self.loading_config:
+            return
+
+        if self.current_symbol_style_preset() == "kicad_default":
+            self.set_symbol_line_color(KICAD_DEFAULT_BODY_COLOR)
+            self.set_symbol_fill_color(KICAD_DEFAULT_FILL_COLOR)
+
+        self.on_style_changed()
 
     # Handle field changes
     def on_style_changed(self, *args) -> None:
@@ -436,16 +464,13 @@ class SymbolStyleTab(QWidget):
             return
 
         self.update_formatting_controls_enabled()
-        self.update_fill_color_enabled()
         self.preview_update_timer.start()
         self.auto_save_timer.start()
 
-    # Enable formatting controls only when formatting will be applied on import
+    # Keep style controls editable even when formatting is temporarily disabled
     def update_formatting_controls_enabled(self) -> None:
-        formatting_enabled = self.apply_formatting_checkbox.isChecked()
-
         for control in self.formatting_controls:
-            control.setEnabled(formatting_enabled)
+            control.setEnabled(True)
 
     # Set line color button state
     def set_symbol_line_color(self, color: str) -> None:
@@ -485,25 +510,24 @@ class SymbolStyleTab(QWidget):
             "}"
         )
 
-    # Enable custom fill color only when it is used
-    def update_fill_color_enabled(self) -> None:
-        self.symbol_fill_color_button.setEnabled(
-            self.apply_formatting_checkbox.isChecked()
-            and self.symbol_fill_mode_combo.currentData() == "color"
-        )
-
     # Choose line color
     def choose_symbol_line_color(self) -> None:
         color = QColorDialog.getColor(
             QColor(self.symbol_line_color),
             self,
             "Select symbol line color",
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
         )
 
         if not color.isValid():
             return
 
-        self.set_symbol_line_color(color.name())
+        selected_color = normalize_hex_color(color.name())
+        if selected_color == self.symbol_line_color:
+            return
+
+        self.set_symbol_line_color(selected_color)
+        self.set_symbol_style_preset("custom")
         self.on_style_changed()
 
     # Choose fill color
@@ -512,12 +536,21 @@ class SymbolStyleTab(QWidget):
             QColor(self.symbol_fill_color),
             self,
             "Select symbol fill color",
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
         )
 
         if not color.isValid():
             return
 
-        self.set_symbol_fill_color(color.name())
+        selected_color = normalize_hex_color(
+            color.name(),
+            fallback=KICAD_DEFAULT_FILL_COLOR,
+        )
+        if selected_color == self.symbol_fill_color:
+            return
+
+        self.set_symbol_fill_color(selected_color)
+        self.set_symbol_style_preset("custom")
         self.on_style_changed()
 
     # Return True when a color needs light text for contrast
@@ -531,6 +564,16 @@ class SymbolStyleTab(QWidget):
 
     # Build config from current fields
     def build_config_from_fields(self) -> GuiConfig:
+        preset = self.current_symbol_style_preset()
+        symbol_line_color = self.symbol_line_color
+        symbol_fill_mode = "color"
+        symbol_fill_color = self.symbol_fill_color
+
+        if preset == "kicad_default":
+            symbol_line_color = KICAD_DEFAULT_BODY_COLOR
+            symbol_fill_mode = KICAD_DEFAULT_FILL_MODE
+            symbol_fill_color = KICAD_DEFAULT_FILL_COLOR
+
         return GuiConfig(
             project_root=self.config.project_root,
             library_name=self.config.library_name,
@@ -541,13 +584,11 @@ class SymbolStyleTab(QWidget):
             auto_import_enabled=self.config.auto_import_enabled,
             start_with_windows=self.config.start_with_windows,
             symbol_style_enabled=self.apply_formatting_checkbox.isChecked(),
+            symbol_style_preset=preset,
             symbol_line_width_mm=self.symbol_line_width_spin.value(),
-            symbol_line_color=self.symbol_line_color,
-            symbol_fill_mode=(
-                self.symbol_fill_mode_combo.currentData()
-                or KICAD_DEFAULT_FILL_MODE
-            ),
-            symbol_fill_color=self.symbol_fill_color,
+            symbol_line_color=symbol_line_color,
+            symbol_fill_mode=symbol_fill_mode,
+            symbol_fill_color=symbol_fill_color,
             symbol_font_size_mm=self.symbol_font_size_spin.value(),
         )
 
@@ -573,7 +614,6 @@ class SymbolStyleTab(QWidget):
         try:
             self.committing_config = True
             self.config = config
-            save_gui_config(config)
             self.configSaved.emit(config, show_log)
         finally:
             self.committing_config = False
