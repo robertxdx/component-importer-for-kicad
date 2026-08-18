@@ -306,7 +306,6 @@ Release files are written beneath `release_builds/<timestamp>/`.
 
 - [Installation guide](docs/INSTALL.md)
 - [Linux support notes](docs/LINUX.md)
-- [Publishing guide](docs/PUBLISHING.md)
 - [Discord community](https://discord.gg/hnFYPJp6CK)
 - [Report an issue](https://github.com/robertxdx/component-importer-for-kicad/issues)
 
