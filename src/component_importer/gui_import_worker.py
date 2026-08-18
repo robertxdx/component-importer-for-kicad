@@ -13,6 +13,7 @@ from component_importer.gui_config_manager import build_symbol_style_from_config
 
 # Import import validator
 from component_importer.import_validator import validate_imported_part
+from component_importer.library_table_updater import update_global_kicad_library_tables
 
 
 # Return one failed validation check for a category, if any
@@ -137,19 +138,75 @@ class ImportComponentWorker(QObject):
                 if result.get("symbol_style_update"):
                     skipped_message += "\nSymbol style refreshed."
 
-                output = (
-                    f"Import: {self.part_name}\n"
-                    f"{skipped_message}"
-                )
-                self.finished.emit(result, validation, output)
-                return
+                if not self.config.import_to_global_library:
+                    output = f"Import: {self.part_name}\n{skipped_message}"
+                    self.finished.emit(result, validation, output)
+                    return
 
-            # Run validation
-            validation = validate_imported_part(
-                project_root=project_root,
-                result=result,
-                library_name=self.config.library_name,
-            )
+            else:
+                # Run validation for a project import that changed files.
+                validation = validate_imported_part(
+                    project_root=project_root,
+                    result=result,
+                    library_name=self.config.library_name,
+                )
+
+            # Optionally repeat the import into persistent libraries registered
+            # in KiCad's per-user global library tables.
+            if self.config.import_to_global_library:
+                global_root = (
+                    Path(self.config.global_library_root).expanduser().resolve()
+                )
+                global_result = import_cad_zip(
+                    zip_path=self.zip_path,
+                    project_root=global_root,
+                    library_name=self.config.global_library_name,
+                    symbol_library_name=self.config.global_library_name,
+                    footprint_library_name=self.config.global_library_name,
+                    part_name=self.part_name,
+                    footprint_filter_mode="exact",
+                    create_backups=True,
+                    skip_existing_components=True,
+                    symbol_style=build_symbol_style_from_config(self.config),
+                    update_library_tables=False,
+                    library_layout="external",
+                )
+
+                global_result["library_table_update"] = (
+                    update_global_kicad_library_tables(
+                        kicad_config_dir=self.config.kicad_config_dir,
+                        library_name=self.config.global_library_name,
+                        footprint_library_path=global_result[
+                            "selected_footprint_library"
+                        ],
+                        symbol_library_paths=[
+                            global_result["selected_symbol_library"]
+                        ],
+                    )
+                )
+                result["global_import"] = global_result
+
+                if global_result.get("skipped_existing", False):
+                    global_validation = {
+                        "passed": True,
+                        "warnings": [],
+                        "checks": {},
+                        "skipped_existing": True,
+                    }
+                else:
+                    global_validation = validate_imported_part(
+                        project_root=global_root,
+                        result=global_result,
+                        library_name=self.config.global_library_name,
+                        table_root=self.config.kicad_config_dir,
+                        global_tables=True,
+                    )
+
+                validation["global"] = global_validation
+                validation["passed"] = (
+                    validation.get("passed", False)
+                    and global_validation.get("passed", False)
+                )
 
             # Build compact GUI log output
             output = build_compact_import_log(
@@ -157,6 +214,23 @@ class ImportComponentWorker(QObject):
                 validation=validation,
                 part_name=self.part_name,
             )
+
+            if result.get("skipped_existing", False):
+                output = (
+                    f"Import: {self.part_name}\n"
+                    "Project library: already present"
+                )
+
+            if self.config.import_to_global_library:
+                global_result = result.get("global_import", {})
+                global_validation = validation.get("global", {})
+
+                if global_result.get("skipped_existing", False):
+                    output += "\nGlobal library: already present"
+                elif global_validation.get("passed", False):
+                    output += "\nGlobal library: OK"
+                else:
+                    output += "\nGlobal library: ERROR"
 
             # Emit result
             self.finished.emit(result, validation, output)

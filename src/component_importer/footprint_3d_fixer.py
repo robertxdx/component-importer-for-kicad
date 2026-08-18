@@ -159,6 +159,7 @@ def replace_3d_model_paths(
     footprint_path: str | Path,
     model_filename: str,
     project_relative_model_dir: str = "libraries/3dmodels",
+    model_path_prefix: str | None = None,
 ) -> bool:
     # Convert input to a Path object
     footprint_path = Path(footprint_path)
@@ -170,8 +171,11 @@ def replace_3d_model_paths(
     # Read footprint text
     content = footprint_path.read_text(encoding="utf-8", errors="ignore")
 
-    # Build the new KiCad project-relative 3D model path
-    new_model_path = f"${{KIPRJMOD}}/{project_relative_model_dir}/{model_filename}"
+    # Project libraries use KIPRJMOD; global libraries use an absolute prefix.
+    if model_path_prefix is None:
+        new_model_path = f"${{KIPRJMOD}}/{project_relative_model_dir}/{model_filename}"
+    else:
+        new_model_path = f"{model_path_prefix.rstrip('/')}/{model_filename}"
 
     # If the footprint has no 3D model block, add one before the final closing parenthesis
     if "(model " not in content:
@@ -214,6 +218,7 @@ def replace_3d_model_paths(
 def fix_3d_paths_for_imported_footprints(
     footprint_files: list[str | Path],
     model_files: list[str | Path],
+    model_path_prefix: str | None = None,
 ) -> dict:
     # Prepare result dictionary
     result = {
@@ -251,6 +256,7 @@ def fix_3d_paths_for_imported_footprints(
         changed = replace_3d_model_paths(
             footprint_path=footprint_file,
             model_filename=best_model.name,
+            model_path_prefix=model_path_prefix,
         )
 
         # Store matching details for debugging and summary display

@@ -23,7 +23,7 @@ class HowToUseTab(QWidget):
         help_text = QTextBrowser()
         help_text.setOpenExternalLinks(True)
         help_text.setHtml(
-            """
+            r"""
             <h2>First use with a KiCad project</h2>
 
             <h3>Step 1.</h3>
@@ -48,6 +48,7 @@ class HowToUseTab(QWidget):
             <p>
               Input your downloads folder path, name your library, check or
               uncheck <b>Automatically import new ZIP files</b>, optionally
+              enable <b>Also import components into a KiCad global library</b>,
               check <b>Start automatically on login</b>, then click
               <b>Save Configuration</b>. After this is saved once, the app uses
               that configuration automatically on startup. Click
@@ -92,6 +93,65 @@ class HowToUseTab(QWidget):
             <p>
               In KiCad, place the symbol from your configured symbol library.
               The footprint is assigned automatically by the importer.
+            </p>
+
+            <h2>Optional global library</h2>
+
+            <p>
+              Enable <b>Also import components into a KiCad global library</b>
+              to copy each component into both the current project library and
+              a persistent library available to other KiCad projects. The app
+              automatically selects the newest initialized KiCad version and
+              registers the library in that version's global symbol and
+              footprint tables. You can change the storage and KiCad config
+              folders in Configuration. Close and reopen KiCad after enabling
+              this for the first time.
+            </p>
+
+            <h3>What to enter in the global-library fields</h3>
+
+            <p>
+              <b>Global library folder</b> is the external folder where the
+              actual symbol, footprint, 3D model, source ZIP, metadata, and
+              backup files are stored. This can be anywhere you keep your
+              personal libraries; it is not a KiCad installation folder.
+            </p>
+
+            <p>
+              Generic examples:<br>
+              Windows: <code>C:\KiCad_Libraries\My_Global_Library</code><br>
+              Linux: <code>~/KiCad/Libraries/My_Global_Library</code>
+            </p>
+
+            <p>
+              <b>Global library name</b> is the symbol and footprint library
+              name that appears in KiCad. To reuse an existing library, enter
+              the existing library's name. For a new library, a generic example
+              is:<br>
+              <code>My_Global_Library</code>
+            </p>
+
+            <p>
+              <b>KiCad global config folder</b> does not contain the component
+              files. It contains KiCad's <code>sym-lib-table</code> and
+              <code>fp-lib-table</code> registry files. The importer updates
+              those two tables so KiCad knows where the external library is
+              located and makes it available to every project.
+            </p>
+
+            <p>
+              Generic examples for KiCad 10:<br>
+              Windows: <code>%APPDATA%\kicad\10.0</code><br>
+              Linux: <code>~/.config/kicad/10.0</code><br>
+              Select the version folder for the KiCad version you use.
+            </p>
+
+            <p>
+              In short: the external library folder holds the actual library,
+              while the KiCad config folder only holds addresses that
+              point KiCad to that library. Do not select <code>Program Files</code>,
+              the project folder, or the external library folder as the KiCad
+              global config folder.
             </p>
 
             <h2>Automatic import</h2>
@@ -181,6 +241,10 @@ class HowToUseTab(QWidget):
               <li><b>KiCad project root</b>: folder that contains the project <b>.kicad_pro</b> file.</li>
               <li><b>Downloads/watch folder</b>: folder where you download the component ZIP files.</li>
               <li><b>Library name</b>: shared name used for the generated <b>.kicad_sym</b> and <b>.pretty</b> libraries.</li>
+              <li><b>Also import components into a KiCad global library</b>: imports each ZIP into the project and a persistent library available to all projects.</li>
+              <li><b>Global library folder</b>: persistent storage for globally imported symbols, footprints, models, and metadata.</li>
+              <li><b>Global library name</b>: symbol and footprint library name used for the global destination; it can differ from the project library name.</li>
+              <li><b>KiCad global config folder</b>: versioned KiCad user folder containing <b>sym-lib-table</b> and <b>fp-lib-table</b>.</li>
               <li><b>Automatically import new ZIP files</b>: watches the downloads folder while the app is running and imports new ZIP files after they finish downloading.</li>
               <li><b>Start automatically on login</b>: starts this app when you log in and opens it minimized to the tray when a system tray is available.</li>
             </ul>

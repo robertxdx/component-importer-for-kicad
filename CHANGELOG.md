@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added optional simultaneous import into persistent KiCad global symbol and
+  footprint libraries, including global table registration and absolute 3D
+  model links.
 - Added Linux compatibility support for Ubuntu, Zorin OS, Pop!_OS, and close Ubuntu-based distributions.
 - Added platform-aware config and downloads folders.
 - Added Linux PyInstaller bundle script and Linux testing notes.

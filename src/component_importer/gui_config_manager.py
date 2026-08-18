@@ -25,6 +25,8 @@ import re
 
 # Import app path helper
 from component_importer.app_paths import default_downloads_dir
+from component_importer.app_paths import default_global_library_root
+from component_importer.app_paths import default_kicad_config_dir
 from component_importer.app_paths import gui_config_file_path
 from component_importer.library_table_updater import make_library_nickname
 from component_importer.models import AssetType
@@ -77,6 +79,22 @@ class GuiConfig:
         default_factory=lambda: str(default_downloads_dir())
     )
 
+    # Also copy each successful import into a persistent user-global library
+    import_to_global_library: bool = False
+
+    # Persistent storage used for the global symbol, footprint, and model files
+    global_library_root: str = field(
+        default_factory=lambda: str(default_global_library_root())
+    )
+
+    # Symbol/footprint library name used only for the global destination
+    global_library_name: str = ""
+
+    # Versioned KiCad user config folder containing global library tables
+    kicad_config_dir: str = field(
+        default_factory=lambda: str(default_kicad_config_dir() or "")
+    )
+
     # Create backups before overwriting files
     create_backups: bool = True
 
@@ -121,6 +139,12 @@ class GuiConfig:
         self.library_name = shared_library_name
         self.symbol_library_name = shared_library_name
         self.footprint_library_name = shared_library_name
+        self.import_to_global_library = bool(self.import_to_global_library)
+        self.global_library_root = clean_config_text(self.global_library_root)
+        self.kicad_config_dir = clean_config_text(self.kicad_config_dir)
+        self.global_library_name = make_library_nickname(
+            clean_config_text(self.global_library_name) or shared_library_name
+        )
         self.symbol_style_enabled = bool(self.symbol_style_enabled)
         self.symbol_style_preset = normalize_symbol_style_preset(
             self.symbol_style_preset,
@@ -188,6 +212,9 @@ def config_from_dict(data: dict) -> GuiConfig:
     default_data["library_name"] = shared_library_name
     default_data["symbol_library_name"] = shared_library_name
     default_data["footprint_library_name"] = shared_library_name
+
+    if not clean_config_text(data.get("global_library_name")):
+        default_data["global_library_name"] = shared_library_name
 
     # Backups are intentionally always enabled, even for older config files
     default_data["create_backups"] = True
@@ -270,13 +297,39 @@ def save_gui_config(config: GuiConfig, config_path: str | Path = CONFIG_FILE) ->
     data = asdict(config)
     data["create_backups"] = True
 
-    # Write formatted JSON atomically to avoid half-written config files
+    # Prefer an atomic replacement. Some cloud-backed Windows folders perform
+    # the replacement successfully and then still report WinError 5, so verify
+    # the target and fall back to a direct write when replacement is unavailable.
+    config_text = json.dumps(data, indent=2)
     temp_path = config_path.with_name(f"{config_path.name}.tmp")
     temp_path.write_text(
-        json.dumps(data, indent=2),
+        config_text,
         encoding="utf-8",
     )
-    temp_path.replace(config_path)
+
+    try:
+        temp_path.replace(config_path)
+    except OSError:
+        try:
+            target_matches = (
+                config_path.exists()
+                and config_path.read_text(encoding="utf-8") == config_text
+            )
+        except OSError:
+            target_matches = False
+
+        if not target_matches:
+            config_path.write_text(config_text, encoding="utf-8")
+
+            # Do not silently accept a partial/filtered cloud-provider write.
+            if config_path.read_text(encoding="utf-8") != config_text:
+                raise OSError(f"Configuration write verification failed: {config_path}")
+
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            # A locked sidecar is harmless and will be reused on the next save.
+            pass
 
 
 # Convert GUI style settings to the backend symbol style object
@@ -417,6 +470,40 @@ def validate_gui_config(config: GuiConfig) -> list[str]:
     # Check shared library name
     if not config.library_name.strip():
         errors.append("Library name is empty.")
+
+    # Global import needs persistent storage and a versioned KiCad config folder.
+    if config.import_to_global_library:
+        if not config.global_library_root:
+            errors.append("Global library folder is empty.")
+        elif (
+            Path(config.global_library_root).exists()
+            and not Path(config.global_library_root).is_dir()
+        ):
+            errors.append(
+                f"Global library path is not a folder: {config.global_library_root}"
+            )
+        elif config.project_root:
+            project_root = Path(config.project_root).expanduser().resolve()
+            global_root = Path(config.global_library_root).expanduser().resolve()
+
+            if (
+                project_root == global_root
+                or global_root.is_relative_to(project_root)
+                or project_root.is_relative_to(global_root)
+            ):
+                errors.append(
+                    "Global library folder must be separate from the project root."
+                )
+
+        if not config.global_library_name:
+            errors.append("Global library name is empty.")
+
+        if not config.kicad_config_dir:
+            errors.append("KiCad global configuration folder is empty.")
+        elif not Path(config.kicad_config_dir).is_dir():
+            errors.append(
+                f"KiCad global configuration folder does not exist: {config.kicad_config_dir}"
+            )
 
     # Return validation errors
     return errors

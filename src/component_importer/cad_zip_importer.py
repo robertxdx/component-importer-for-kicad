@@ -305,6 +305,8 @@ def import_cad_zip(
     replace_existing_symbols: bool = True,
     skip_existing_components: bool = True,
     symbol_style: object | None = None,
+    model_path_prefix: str | None = None,
+    library_layout: str = "project",
 ) -> dict:
     # Convert input paths to Path objects
     zip_path = Path(zip_path)
@@ -341,7 +343,11 @@ def import_cad_zip(
         library_name=library_name,
         symbol_library_name=symbol_library_name,
         footprint_library_name=footprint_library_name,
+        layout=library_layout,
     )
+
+    if library_layout == "external" and model_path_prefix is None:
+        model_path_prefix = paths["models_dir"].resolve().as_posix()
 
     # Scan ZIP file and detect supported CAD assets
     assets = scan_cad_zip(zip_path)
@@ -350,6 +356,7 @@ def import_cad_zip(
     imported = {
         "selected_symbol_library": str(paths["symbol_lib_path"]),
         "selected_footprint_library": str(paths["footprint_lib_dir"]),
+        "selected_model_library": str(paths["models_dir"]),
         "symbol_libraries": [],
         "source_symbol_libraries": [],
         "merged_symbols": [],
@@ -610,6 +617,7 @@ def import_cad_zip(
         imported["3d_path_fix"] = fix_3d_paths_for_imported_footprints(
             footprint_files=imported["footprints"],
             model_files=imported["models_3d"],
+            model_path_prefix=model_path_prefix,
         )
 
     # Backup library tables before updating them

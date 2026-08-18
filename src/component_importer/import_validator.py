@@ -9,6 +9,7 @@ import re
 
 # Import helper used to make library names match KiCad table nicknames
 from component_importer.library_table_updater import make_library_nickname
+from component_importer.library_table_updater import make_absolute_library_uri
 
 # Import helper used to read 3D model paths from footprint files
 from component_importer.footprint_3d_fixer import find_3d_models_in_footprint
@@ -560,13 +561,16 @@ def validate_library_tables(
     project_root: str | Path,
     result: dict,
     library_name: str,
+    table_root: str | Path | None = None,
+    global_tables: bool = False,
 ) -> None:
     # Convert project root to Path object
     project_root = Path(project_root)
 
-    # Define table paths
-    sym_table_path = project_root / "sym-lib-table"
-    fp_table_path = project_root / "fp-lib-table"
+    # Global tables live in KiCad's user config folder, not the library folder.
+    table_root = Path(table_root) if table_root is not None else project_root
+    sym_table_path = table_root / "sym-lib-table"
+    fp_table_path = table_root / "fp-lib-table"
 
     # Check sym-lib-table exists
     add_check(
@@ -607,7 +611,11 @@ def validate_library_tables(
     )
 
     # Build expected footprint library URI
-    footprint_library_uri = make_kiprojmod_uri(project_root, footprint_library_path)
+    footprint_library_uri = (
+        make_absolute_library_uri(footprint_library_path)
+        if global_tables
+        else make_kiprojmod_uri(project_root, footprint_library_path)
+    )
 
     # Check footprint library URI is registered
     add_check(
@@ -627,7 +635,11 @@ def validate_library_tables(
         symbol_nickname = make_library_nickname(symbol_library.stem)
 
         # Expected URI
-        symbol_uri = make_kiprojmod_uri(project_root, symbol_library)
+        symbol_uri = (
+            make_absolute_library_uri(symbol_library)
+            if global_tables
+            else make_kiprojmod_uri(project_root, symbol_library)
+        )
 
         # Check symbol nickname registered
         add_check(
@@ -653,6 +665,8 @@ def validate_imported_part(
     project_root: str | Path,
     result: dict,
     library_name: str,
+    table_root: str | Path | None = None,
+    global_tables: bool = False,
 ) -> dict:
     # Prepare validation dictionary
     validation = {
@@ -682,6 +696,8 @@ def validate_imported_part(
         project_root=project_root,
         result=result,
         library_name=library_name,
+        table_root=table_root,
+        global_tables=global_tables,
     )
 
     # Return validation result

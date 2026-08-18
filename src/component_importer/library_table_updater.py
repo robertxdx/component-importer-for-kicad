@@ -148,6 +148,12 @@ def make_project_relative_uri(project_root: str | Path, target_path: str | Path)
     return f"${{KIPRJMOD}}/{relative_path}"
 
 
+# Convert a library path to a portable absolute URI for KiCad's global tables
+def make_absolute_library_uri(target_path: str | Path) -> str:
+    target_path = Path(target_path).expanduser().resolve()
+    return target_path.as_posix()
+
+
 # Resolve a KiCad table URI only when it points inside the selected project
 def resolve_project_local_library_uri(
     project_root: str | Path,
@@ -401,6 +407,90 @@ def add_symbol_library_to_table(
     return True
 
 
+# Add a footprint library to a user-global fp-lib-table using an absolute URI
+def add_global_footprint_library_to_table(
+    kicad_config_dir: str | Path,
+    library_nickname: str,
+    footprint_library_path: str | Path,
+) -> bool:
+    kicad_config_dir = Path(kicad_config_dir)
+    footprint_library_path = Path(footprint_library_path).expanduser().resolve()
+    table_path = kicad_config_dir / "fp-lib-table"
+    create_empty_fp_lib_table(table_path)
+    library_nickname = make_library_nickname(library_nickname)
+
+    existing_uri = find_library_uri_in_table(table_path, library_nickname)
+
+    if existing_uri is not None:
+        if paths_are_same(Path(existing_uri), footprint_library_path):
+            return False
+
+        raise ValueError(
+            "Global footprint library nickname already exists with a different URI: "
+            f"{library_nickname} -> {existing_uri}"
+        )
+
+    content = table_path.read_text(encoding="utf-8", errors="ignore")
+    insert_position = content.rfind(")")
+
+    if insert_position == -1:
+        raise ValueError(f"Invalid fp-lib-table file: {table_path}")
+
+    library_uri = make_absolute_library_uri(footprint_library_path)
+    entry = (
+        f'  (lib (name "{library_nickname}") (type "KiCad") '
+        f'(uri "{library_uri}") (options "") '
+        f'(descr "Component Importer global footprint library"))\n'
+    )
+    table_path.write_text(
+        content[:insert_position] + entry + content[insert_position:],
+        encoding="utf-8",
+    )
+    return True
+
+
+# Add a symbol library to a user-global sym-lib-table using an absolute URI
+def add_global_symbol_library_to_table(
+    kicad_config_dir: str | Path,
+    library_nickname: str,
+    symbol_library_path: str | Path,
+) -> bool:
+    kicad_config_dir = Path(kicad_config_dir)
+    symbol_library_path = Path(symbol_library_path).expanduser().resolve()
+    table_path = kicad_config_dir / "sym-lib-table"
+    create_empty_sym_lib_table(table_path)
+    library_nickname = make_library_nickname(library_nickname)
+
+    existing_uri = find_library_uri_in_table(table_path, library_nickname)
+
+    if existing_uri is not None:
+        if paths_are_same(Path(existing_uri), symbol_library_path):
+            return False
+
+        raise ValueError(
+            "Global symbol library nickname already exists with a different URI: "
+            f"{library_nickname} -> {existing_uri}"
+        )
+
+    content = table_path.read_text(encoding="utf-8", errors="ignore")
+    insert_position = content.rfind(")")
+
+    if insert_position == -1:
+        raise ValueError(f"Invalid sym-lib-table file: {table_path}")
+
+    library_uri = make_absolute_library_uri(symbol_library_path)
+    entry = (
+        f'  (lib (name "{library_nickname}") (type "KiCad") '
+        f'(uri "{library_uri}") (options "") '
+        f'(descr "Component Importer global symbol library"))\n'
+    )
+    table_path.write_text(
+        content[:insert_position] + entry + content[insert_position:],
+        encoding="utf-8",
+    )
+    return True
+
+
 # Register imported footprint and symbol libraries in KiCad project tables
 def update_kicad_library_tables(
     project_root: str | Path,
@@ -447,4 +537,40 @@ def update_kicad_library_tables(
             result["symbol_tables_skipped"].append(str(symbol_library_path))
 
     # Return summary
+    return result
+
+
+# Register libraries in KiCad's per-user global library tables
+def update_global_kicad_library_tables(
+    kicad_config_dir: str | Path,
+    library_name: str,
+    footprint_library_path: str | Path,
+    symbol_library_paths: list[str | Path],
+) -> dict:
+    kicad_config_dir = Path(kicad_config_dir)
+    result = {
+        "footprint_table_updated": add_global_footprint_library_to_table(
+            kicad_config_dir=kicad_config_dir,
+            library_nickname=library_name,
+            footprint_library_path=footprint_library_path,
+        ),
+        "symbol_tables_updated": [],
+        "symbol_tables_skipped": [],
+    }
+
+    for symbol_library_path in symbol_library_paths:
+        symbol_library_path = Path(symbol_library_path)
+        changed = add_global_symbol_library_to_table(
+            kicad_config_dir=kicad_config_dir,
+            library_nickname=symbol_library_path.stem,
+            symbol_library_path=symbol_library_path,
+        )
+
+        target = (
+            result["symbol_tables_updated"]
+            if changed
+            else result["symbol_tables_skipped"]
+        )
+        target.append(str(symbol_library_path))
+
     return result

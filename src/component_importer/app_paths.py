@@ -15,6 +15,66 @@ APP_NAME = "KiCad Component Importer"
 APP_DIR_NAME = "KiCadComponentImporter"
 
 
+# Return the per-user folder that contains versioned KiCad configuration folders
+def kicad_config_base_dir() -> Path:
+    if is_windows():
+        roaming_app_data = os.environ.get("APPDATA")
+
+        if roaming_app_data:
+            return Path(roaming_app_data) / "kicad"
+
+        return Path.home() / "AppData" / "Roaming" / "kicad"
+
+    if is_darwin():
+        return Path.home() / "Library" / "Preferences" / "kicad"
+
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
+
+    if xdg_config_home:
+        return Path(xdg_config_home) / "kicad"
+
+    return Path.home() / ".config" / "kicad"
+
+
+# Find the newest installed/initialized KiCad version configuration folder
+def default_kicad_config_dir() -> Path | None:
+    base_dir = kicad_config_base_dir()
+
+    if not base_dir.is_dir():
+        return None
+
+    candidates = []
+
+    for candidate in base_dir.iterdir():
+        if not candidate.is_dir():
+            continue
+
+        try:
+            version_key = tuple(int(part) for part in candidate.name.split("."))
+        except ValueError:
+            continue
+
+        candidates.append((version_key, candidate))
+
+    if not candidates:
+        return None
+
+    # Prefer versions where KiCad already created at least one global table.
+    initialized = [
+        item
+        for item in candidates
+        if (item[1] / "sym-lib-table").exists()
+        or (item[1] / "fp-lib-table").exists()
+    ]
+
+    return max(initialized or candidates, key=lambda item: item[0])[1]
+
+
+# Default persistent storage for libraries registered in KiCad's global tables
+def default_global_library_root() -> Path:
+    return user_data_dir() / "global_libraries"
+
+
 # Return True when running on Windows
 def is_windows() -> bool:
     return sys.platform.startswith("win")

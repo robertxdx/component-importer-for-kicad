@@ -37,6 +37,7 @@ from component_importer.app_paths import runtime_icon_path
 
 # Import library initializer
 from component_importer.project_library_initializer import initialize_project_libraries
+from component_importer.project_library_initializer import initialize_global_libraries
 
 # Import tabs
 from component_importer.gui_config_tab import ConfigTab
@@ -330,6 +331,15 @@ class MainWindow(QMainWindow):
                 symbol_library_name=self.config.library_name,
                 footprint_library_name=self.config.library_name,
             )
+
+            global_result = None
+
+            if self.config.import_to_global_library:
+                global_result = initialize_global_libraries(
+                    global_library_root=self.config.global_library_root,
+                    kicad_config_dir=self.config.kicad_config_dir,
+                    library_name=self.config.global_library_name,
+                )
         except Exception as error:
             if show_log:
                 self.log(f"Library setup error: {error}")
@@ -345,6 +355,18 @@ class MainWindow(QMainWindow):
                 self.log("Project libraries registered.")
             else:
                 self.log("Project libraries ready.")
+
+            if global_result is not None:
+                global_table_update = global_result.get("table_update", {})
+                global_changed = (
+                    global_table_update.get("footprint_table_updated", False)
+                    or bool(global_table_update.get("symbol_tables_updated", []))
+                )
+                self.log(
+                    "Global libraries registered."
+                    if global_changed
+                    else "Global libraries ready."
+                )
 
         return True
 
@@ -490,8 +512,17 @@ class MainWindow(QMainWindow):
         # Mark not busy
         self.import_busy = False
 
-        # Show a success popup for completed imports, but not skipped duplicates
-        if validation.get("passed", False) and not result.get("skipped_existing", False):
+        global_result = result.get("global_import", {})
+        imported_anywhere = (
+            not result.get("skipped_existing", False)
+            or (
+                bool(global_result)
+                and not global_result.get("skipped_existing", False)
+            )
+        )
+
+        # Show a success popup when either destination received the component.
+        if validation.get("passed", False) and imported_anywhere:
             component_name = self.get_imported_component_name(
                 result=result,
                 fallback=import_context.get("part_name", "Component"),
@@ -539,6 +570,13 @@ class MainWindow(QMainWindow):
         # Fallback for incomplete configuration
         if not library_name:
             return "configured", "library"
+
+        if self.config.import_to_global_library:
+            global_name = self.config.global_library_name.strip()
+            return (
+                f"{library_name} project and {global_name} global",
+                "libraries",
+            )
 
         return library_name, "library"
 

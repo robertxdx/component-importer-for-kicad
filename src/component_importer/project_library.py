@@ -134,6 +134,7 @@ def create_project_library_structure(
     library_name: str,
     symbol_library_name: str | None = None,
     footprint_library_name: str | None = None,
+    layout: str = "project",
 ) -> dict[str, Path]:
     # Convert input to a Path object
     project_root = Path(project_root)
@@ -149,38 +150,56 @@ def create_project_library_structure(
     symbol_library_name = make_library_nickname(symbol_library_name)
     footprint_library_name = make_library_nickname(footprint_library_name)
 
-    # Main folder where all local libraries will be stored
-    libraries_dir = project_root / "libraries"
+    if layout not in {"project", "external"}:
+        raise ValueError(f"Unknown library layout: {layout}")
+
+    # Project imports use the existing compact layout. External global imports
+    # use conventional Symbols/Footprints/3DModels folders directly.
+    if layout == "external":
+        libraries_dir = project_root
+        symbol_libraries_dir = project_root / "Symbols"
+        footprint_libraries_dir = project_root / "Footprints"
+        models_dir = (
+            project_root
+            / "3DModels"
+            / f"{footprint_library_name}.3dshapes"
+        )
+        support_dir = project_root / "ComponentImporterData"
+    else:
+        libraries_dir = project_root / "libraries"
+        symbol_libraries_dir = libraries_dir
+        footprint_libraries_dir = libraries_dir
+        models_dir = libraries_dir / "3dmodels"
+        support_dir = libraries_dir
 
     # Main shared KiCad symbol library
     symbol_lib_path = resolve_symbol_library_path(
         project_root=project_root,
-        libraries_dir=libraries_dir,
+        libraries_dir=symbol_libraries_dir,
         symbol_library_name=symbol_library_name,
     )
 
     # Folder where raw imported symbol libraries can be stored if needed later
-    symbol_imports_dir = libraries_dir / "imported_symbols"
+    symbol_imports_dir = support_dir / "imported_symbols"
 
     # KiCad footprint library folder
     # KiCad footprint libraries use the .pretty folder extension
     footprint_lib_dir = resolve_footprint_library_dir(
         project_root=project_root,
-        libraries_dir=libraries_dir,
+        libraries_dir=footprint_libraries_dir,
         footprint_library_name=footprint_library_name,
     )
 
-    # Folder for STEP, STP, WRL, and STL 3D models
-    models_dir = libraries_dir / "3dmodels"
-
     # Folder where original downloaded ZIP files are stored for traceability
-    source_zips_dir = libraries_dir / "source_zips"
+    source_zips_dir = support_dir / "source_zips"
 
     # Folder for JSON metadata, PDFs, and other support files
-    metadata_dir = libraries_dir / "metadata"
+    metadata_dir = support_dir / "metadata"
 
     # Create all folders
     libraries_dir.mkdir(parents=True, exist_ok=True)
+    symbol_libraries_dir.mkdir(parents=True, exist_ok=True)
+    footprint_libraries_dir.mkdir(parents=True, exist_ok=True)
     symbol_imports_dir.mkdir(parents=True, exist_ok=True)
     footprint_lib_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)

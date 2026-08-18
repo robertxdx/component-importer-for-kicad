@@ -23,6 +23,7 @@ It is designed for workflows where you download component ZIP files from CAD/lib
 ## Features
 
 - Imports component ZIP files into project-local KiCad libraries.
+- Can also copy imports into a persistent global library available to every project.
 - Creates and registers symbol and footprint libraries for the project.
 - Automatically formats imported symbols so third-party parts use a cleaner KiCad-style body, fill, pin spacing, and pin length before they are added to the project library.
 - Copies 3D models, datasheets, source ZIPs, and metadata into organized folders.
@@ -64,8 +65,21 @@ KiCad 10 can keep project library tables loaded in memory while a project is ope
 4. In the Configuration tab, select the KiCad project root folder.
 5. Name your components library.
 6. Select the folder where you download component ZIP files.
-7. Save the configuration.
-8. Open KiCad again and start importing components.
+7. Optionally enable global imports. The app detects the newest initialized
+   KiCad configuration folder and lets you change both the global library
+storage folder and KiCad version folder.
+8. Save the configuration.
+9. Open KiCad again and start importing components.
+
+When global importing is enabled, every ZIP is imported to both the current
+project library and a separate persistent library. That library is registered
+in KiCad's user `sym-lib-table` and `fp-lib-table`, so its components are
+available in other projects. Close KiCad before enabling this option for the
+first time so it reloads the changed global library tables.
+
+The global destination can use a different library name from the project. An
+external root with `Symbols`, `Footprints`, and `3DModels` folders is used
+directly rather than receiving another nested `libraries` folder.
 
 After the project library already exists and KiCad has loaded it, importing new parts into that same library should not require closing KiCad every time.
 

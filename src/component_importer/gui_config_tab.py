@@ -63,6 +63,9 @@ class ConfigTab(QWidget):
 
         # Project root field
         self.project_root_edit = QLineEdit()
+        self.project_root_edit.setPlaceholderText(
+            "Folder containing the .kicad_pro file"
+        )
         self.project_root_button = QPushButton("Browse")
 
         # Project root row
@@ -72,6 +75,9 @@ class ConfigTab(QWidget):
 
         # Downloads folder field
         self.downloads_folder_edit = QLineEdit()
+        self.downloads_folder_edit.setPlaceholderText(
+            "Folder where component ZIP files are downloaded"
+        )
         self.downloads_folder_button = QPushButton("Browse")
 
         # Downloads row
@@ -81,6 +87,34 @@ class ConfigTab(QWidget):
 
         # Library fields
         self.library_name_edit = QLineEdit()
+        self.library_name_edit.setPlaceholderText("Example: Project_Components")
+
+        # Optional global-library destination
+        self.import_to_global_checkbox = QCheckBox(
+            "Also import components into a KiCad global library"
+        )
+        self.global_library_root_edit = QLineEdit()
+        self.global_library_root_edit.setPlaceholderText(
+            "External folder that will contain the global library"
+        )
+        self.global_library_root_button = QPushButton("Browse")
+        global_library_row = QHBoxLayout()
+        global_library_row.addWidget(self.global_library_root_edit)
+        global_library_row.addWidget(self.global_library_root_button)
+
+        self.global_library_name_edit = QLineEdit()
+        self.global_library_name_edit.setPlaceholderText(
+            "Example: My_Global_Library"
+        )
+
+        self.kicad_config_dir_edit = QLineEdit()
+        self.kicad_config_dir_edit.setPlaceholderText(
+            "KiCad version folder containing sym-lib-table and fp-lib-table"
+        )
+        self.kicad_config_dir_button = QPushButton("Browse")
+        kicad_config_row = QHBoxLayout()
+        kicad_config_row.addWidget(self.kicad_config_dir_edit)
+        kicad_config_row.addWidget(self.kicad_config_dir_button)
 
         # Auto import checkbox
         self.auto_import_checkbox = QCheckBox("Automatically import new ZIP files from watched folder")
@@ -99,12 +133,18 @@ class ConfigTab(QWidget):
         form_layout.addRow("KiCad project root:", project_row)
         form_layout.addRow("Downloads/watch folder:", downloads_row)
         form_layout.addRow("Library name:", self.library_name_edit)
+        form_layout.addRow("", self.import_to_global_checkbox)
+        form_layout.addRow("Global library folder:", global_library_row)
+        form_layout.addRow("Global library name:", self.global_library_name_edit)
+        form_layout.addRow("KiCad global config folder:", kicad_config_row)
         form_layout.addRow("", self.auto_import_checkbox)
         form_layout.addRow("", self.start_with_windows_checkbox)
 
         # Help label
         help_label = QLabel(
-            "Use the folder that contains the .kicad_pro file as project root."
+            "Use the folder that contains the .kicad_pro file as project root. "
+            "Global imports are stored separately and registered in the selected "
+            "KiCad version's user library tables."
         )
         help_label.setWordWrap(True)
 
@@ -123,7 +163,12 @@ class ConfigTab(QWidget):
         # Connect buttons
         self.project_root_button.clicked.connect(self.browse_project_root)
         self.downloads_folder_button.clicked.connect(self.browse_downloads_folder)
+        self.global_library_root_button.clicked.connect(self.browse_global_library_root)
+        self.kicad_config_dir_button.clicked.connect(self.browse_kicad_config_dir)
         self.save_button.clicked.connect(self.save_config_from_fields)
+        self.import_to_global_checkbox.stateChanged.connect(
+            self.update_global_fields_enabled
+        )
 
     # Connect field changes to a short autosave timer
     def setup_auto_save(self) -> None:
@@ -138,12 +183,16 @@ class ConfigTab(QWidget):
             self.project_root_edit,
             self.downloads_folder_edit,
             self.library_name_edit,
+            self.global_library_root_edit,
+            self.global_library_name_edit,
+            self.kicad_config_dir_edit,
         ]:
             line_edit.editingFinished.connect(self.schedule_auto_save)
 
         # Discrete controls save shortly after changing
         self.auto_import_checkbox.stateChanged.connect(self.schedule_auto_save)
         self.start_with_windows_checkbox.stateChanged.connect(self.schedule_auto_save)
+        self.import_to_global_checkbox.stateChanged.connect(self.schedule_auto_save)
 
     # Start autosave unless fields are being loaded
     def schedule_auto_save(self, *args) -> None:
@@ -161,10 +210,17 @@ class ConfigTab(QWidget):
         self.project_root_edit.setText(self.config.project_root)
         self.downloads_folder_edit.setText(self.config.downloads_folder)
         self.library_name_edit.setText(self.config.library_name)
+        self.global_library_root_edit.setText(self.config.global_library_root)
+        self.global_library_name_edit.setText(self.config.global_library_name)
+        self.kicad_config_dir_edit.setText(self.config.kicad_config_dir)
 
         # Set checkboxes
         self.auto_import_checkbox.setChecked(self.config.auto_import_enabled)
         self.start_with_windows_checkbox.setChecked(self.config.start_with_windows)
+        self.import_to_global_checkbox.setChecked(
+            self.config.import_to_global_library
+        )
+        self.update_global_fields_enabled()
 
         # Field population is complete
         self.loading_config = False
@@ -197,6 +253,43 @@ class ConfigTab(QWidget):
             self.downloads_folder_edit.setText(folder)
             self.schedule_auto_save()
 
+    # Browse persistent global library storage folder
+    def browse_global_library_root(self) -> None:
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "Select global library storage folder",
+            self.global_library_root_edit.text(),
+        )
+
+        if folder:
+            self.global_library_root_edit.setText(folder)
+            self.schedule_auto_save()
+
+    # Browse the versioned KiCad folder containing global library tables
+    def browse_kicad_config_dir(self) -> None:
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "Select KiCad global configuration folder",
+            self.kicad_config_dir_edit.text(),
+        )
+
+        if folder:
+            self.kicad_config_dir_edit.setText(folder)
+            self.schedule_auto_save()
+
+    # Keep global-only path controls quiet when the feature is disabled
+    def update_global_fields_enabled(self, *args) -> None:
+        enabled = self.import_to_global_checkbox.isChecked()
+
+        for widget in [
+            self.global_library_root_edit,
+            self.global_library_root_button,
+            self.global_library_name_edit,
+            self.kicad_config_dir_edit,
+            self.kicad_config_dir_button,
+        ]:
+            widget.setEnabled(enabled)
+
     # Build a config object from current field values
     def build_config_from_fields(self) -> GuiConfig:
         library_name = self.library_name_edit.text().strip()
@@ -207,6 +300,10 @@ class ConfigTab(QWidget):
             symbol_library_name=library_name,
             footprint_library_name=library_name,
             downloads_folder=self.downloads_folder_edit.text().strip(),
+            import_to_global_library=self.import_to_global_checkbox.isChecked(),
+            global_library_root=self.global_library_root_edit.text().strip(),
+            global_library_name=self.global_library_name_edit.text().strip(),
+            kicad_config_dir=self.kicad_config_dir_edit.text().strip(),
             create_backups=True,
             auto_import_enabled=self.auto_import_checkbox.isChecked(),
             start_with_windows=self.start_with_windows_checkbox.isChecked(),

@@ -19,8 +19,16 @@ def create_backup_root(project_root: str | Path) -> Path:
     # Convert project root to Path object
     project_root = Path(project_root)
 
-    # Store backups inside the project libraries folder
-    backup_root = project_root / "libraries" / "backups"
+    # Keep external global-library support data out of its Symbols, Footprints,
+    # and 3DModels folders. Project imports retain their original layout.
+    if (
+        (project_root / "Symbols").is_dir()
+        and (project_root / "Footprints").is_dir()
+        and (project_root / "3DModels").is_dir()
+    ):
+        backup_root = project_root / "ComponentImporterData" / "backups"
+    else:
+        backup_root = project_root / "libraries" / "backups"
 
     # Create backup folder if missing
     backup_root.mkdir(parents=True, exist_ok=True)
