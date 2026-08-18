@@ -55,25 +55,6 @@ Select a ZIP file and the application will:
 7. Validate the completed import.
 8. Preserve the source ZIP, metadata and backups.
 
-## See it in action
-
-<table>
-  <tr>
-    <td width="33%" align="center">
-      <img src="docs/assets/configuration.png" alt="Configure a KiCad project and component library" width="100%"><br>
-      <strong>Configure libraries</strong>
-    </td>
-    <td width="33%" align="center">
-      <img src="docs/assets/import_zip.png" alt="Import a component ZIP into KiCad" width="100%"><br>
-      <strong>Import component ZIPs</strong>
-    </td>
-    <td width="33%" align="center">
-      <img src="docs/assets/search.png" alt="Search electronic component library providers" width="100%"><br>
-      <strong>Search component providers</strong>
-    </td>
-  </tr>
-</table>
-
 ## Project libraries and global libraries
 
 The importer supports two KiCad library workflows.
