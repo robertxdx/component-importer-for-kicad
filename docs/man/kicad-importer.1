@@ -1,4 +1,4 @@
-.TH KICAD-IMPORTER 1 "2026-08-26" "kicad-importer" "User Commands"
+.TH KICAD-IMPORTER 1 "2026-08-28" "kicad-importer" "User Commands"
 .SH NAME
 kicad-importer \- import component ZIP files into KiCad project libraries
 .SH SYNOPSIS
@@ -16,6 +16,8 @@ kicad-importer \- import component ZIP files into KiCad project libraries
 .RI [ FILE ]
 .RB [ \-\-all ]
 .RB [ \-\-delete ]
+.RB [ \-\-interactive ]
+.RB [ \-\-yes ]
 .RB [ \-\-debug ]
 .SH DESCRIPTION
 .B kicad-importer
@@ -76,6 +78,25 @@ library.
 Requires a discovered
 .I .kicad-importer
 file with a configured library.
+.PP
+If a part is already present in the library, the import stops before touching
+any files and prompts
+.RB \(lq "Overwrite? [y/N]" \(rq .
+The message reports whether the library's copy was modified since it was
+imported (the Symbol, the Footprint, or both), and treats missing or unreadable
+import metadata as modified.
+Answering
+.B y
+overwrites the symbol, footprint and 3D model from the ZIP; any other answer
+cancels that part, leaving it unchanged.
+A cancelled part still counts as a success and, with
+.BR \-\-delete ,
+its ZIP is kept.
+When standard input is not a terminal and
+.B \-\-yes
+is absent, the prompt is answered
+.RB \(lq no \(rq
+without blocking.
 .TP
 .I FILE
 ZIP file to import, given as a path or a bare filename.
@@ -100,11 +121,44 @@ argument.
 .TP
 .BR \-\-delete ", " \-d
 Delete each ZIP after it was imported successfully.
-Components that are already present in the library count as successfully
-imported.
+A part whose overwrite was cancelled keeps its ZIP, but this is not a failure
+and does not stop the other imported ZIPs from being deleted.
 With
 .BR \-\-all ,
 the delete phase is skipped entirely when any import failed.
+.TP
+.BR \-\-interactive ", " \-i
+Open a terminal editor for each imported symbol to reconstruct its pin layout
+before it is written to the library.
+The symbol is drawn as an ASCII chip; pin names on the top and bottom sides are
+drawn vertically.
+Arrow keys move the cursor between pins;
+.B Space
+selects a pin so the arrow keys move it (reordering within a side, carrying it
+around a corner onto the neighbouring side, or jumping it to the opposite side
+when the arrow points into the body).
+.B S
+inserts a blank spacer slot and
+.B d
+deletes one;
+real pins are never deleted.
+Pressing
+.B y
+twice accepts and regenerates the symbol with an auto-sized body on the
+2.54 mm grid; pressing
+.B Esc
+then
+.B Enter
+cancels and imports the symbol exactly as merged.
+With
+.BR \-\-all ,
+the editor runs once per imported ZIP in turn.
+.TP
+.BR \-\-yes ", " \-y
+Overwrite existing parts without prompting.
+Answers every overwrite prompt with
+.RB \(lq yes \(rq,
+which is the usual choice for non-interactive and scripted use.
 .TP
 .B \-\-debug
 Print full Python tracebacks for unexpected errors instead of one-line
@@ -136,8 +190,7 @@ footprint library, 3D models, source ZIP copies, metadata and backups.
 .SH EXIT STATUS
 .TP
 .B 0
-Success, including a cancelled picker and components skipped as already
-imported.
+Success, including a cancelled picker and parts whose overwrite was cancelled.
 .TP
 .B 1
 An error occurred: file not found, missing configuration, or at least one

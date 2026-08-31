@@ -97,6 +97,7 @@ The external library folder contains the actual component files. The KiCad globa
 - Link imported symbols to their footprints
 - Repair 3D-model paths inside footprints
 - Apply optional KiCad-style symbol formatting
+- Rearrange symbol pins interactively during import (terminal and desktop)
 - Detect and skip components already in a library
 - Watch the Downloads folder for new ZIP files
 - Automatically import completed downloads
@@ -243,11 +244,20 @@ kicad-importer import
 
 # Grab every component ZIP in the current folder, then clean them up
 kicad-importer import --all --delete
+
+# Rework the pin layout in a terminal editor before the symbol is written
+kicad-importer import ul_BQ28Z610DRZR.zip --interactive
 ```
 
 The CLI works from any subfolder of the project - it finds the project root
 by itself. Each import merges the symbol, copies footprints and 3D models,
 links everything together and registers the library, exactly like the desktop app.
+
+With `--interactive` (or `-i`) the import opens a keyboard-driven editor that
+draws the symbol as an ASCII chip: move pins around all four sides, insert
+blank spacer slots, and accept to regenerate the symbol with a properly sized
+body and grid-aligned pins. The desktop application offers the same editor as
+a dialog - enable **Interactive pin layout** next to the Import button.
 
 Read [docs/CLI.md](docs/CLI.md) for the full walkthrough, including how file
 searching works and the available CLI flags.

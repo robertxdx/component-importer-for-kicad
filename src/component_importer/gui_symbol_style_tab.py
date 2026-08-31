@@ -624,6 +624,7 @@ class SymbolStyleTab(QWidget):
             symbol_fill_color=symbol_fill_color,
             symbol_font_size_mm=self.symbol_font_size_spin.value(),
             symbol_use_default_colors=self.use_default_colors_checkbox.isChecked(),
+            interactive_pin_layout=self.config.interactive_pin_layout,
         )
 
     # Update preview without saving

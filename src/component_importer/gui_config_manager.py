@@ -128,6 +128,9 @@ class GuiConfig:
     # Emit theme-adaptive (unset) stroke and background fill instead of colors
     symbol_use_default_colors: bool = True
 
+    # Open the interactive pin-layout editor for the symbol before importing
+    interactive_pin_layout: bool = False
+
     # Keep one user-facing library name for both symbol and footprint libraries
     def __post_init__(self) -> None:
         shared_library_name = (
@@ -180,6 +183,7 @@ class GuiConfig:
         # Theme-adaptive colors are independent of the preset, so this flag is
         # normalized here and deliberately left untouched by the preset override.
         self.symbol_use_default_colors = bool(self.symbol_use_default_colors)
+        self.interactive_pin_layout = bool(self.interactive_pin_layout)
 
         if self.symbol_style_preset == "kicad_default":
             self.symbol_line_color = KICAD_DEFAULT_BODY_COLOR
@@ -394,6 +398,50 @@ def infer_part_name_from_zip_symbols(zip_path: str | Path) -> str:
         return ""
 
     return ""
+
+
+# Extract one symbol's block text from the symbol library inside a ZIP.
+#
+# Returns (symbol_name, symbol_block_text) for the symbol whose name matches
+# preferred_name when given, otherwise the first symbol found. Returns None when
+# the ZIP has no readable symbol library. This reads the pre-merge symbol so the
+# interactive layout editor can run before the threaded import starts.
+def extract_symbol_block_from_zip(
+    zip_path: str | Path,
+    preferred_name: str = "",
+) -> tuple[str, str] | None:
+    zip_path = Path(zip_path)
+    preferred = clean_config_text(preferred_name)
+
+    try:
+        assets = scan_cad_zip(zip_path)
+
+        with ZipFile(zip_path, "r") as zf:
+            first_block = None
+
+            for asset in assets:
+                if asset.asset_type != AssetType.SYMBOL_LIB:
+                    continue
+
+                with zf.open(asset.original_path.as_posix()) as src:
+                    content = src.read().decode("utf-8", errors="ignore")
+
+                for block in find_symbol_blocks(content):
+                    name = clean_config_text(block.get("name", ""))
+
+                    if not name:
+                        continue
+
+                    if first_block is None:
+                        first_block = (name, block["text"])
+
+                    if preferred and (name == preferred or safe_name(name) == preferred):
+                        return (name, block["text"])
+
+            return first_block
+
+    except (BadZipFile, KeyError, OSError, ValueError):
+        return None
 
 
 # Infer a useful part name from a ZIP filename without splitting on part dots

@@ -314,6 +314,8 @@ class ConfigTab(QWidget):
             symbol_fill_mode=self.config.symbol_fill_mode,
             symbol_fill_color=self.config.symbol_fill_color,
             symbol_font_size_mm=self.config.symbol_font_size_mm,
+            symbol_use_default_colors=self.config.symbol_use_default_colors,
+            interactive_pin_layout=self.config.interactive_pin_layout,
         )
 
     # Save config from fields

@@ -24,16 +24,29 @@ from PyQt6.QtGui import QIcon
 # Import datetime for log timestamps
 from datetime import datetime
 
+# Import dataclass helper for immutable config updates
+from dataclasses import replace
+
 # Import config helpers
 from component_importer.gui_config_manager import load_gui_config
 from component_importer.gui_config_manager import save_gui_config
 from component_importer.gui_config_manager import infer_part_name_from_zip
+from component_importer.gui_config_manager import extract_symbol_block_from_zip
 from component_importer.gui_config_manager import RECOMMENDED_STABLE_ZIP_DELAY_SECONDS
 from component_importer.gui_config_manager import validate_gui_config
+
+# Import interactive pin-layout editor pieces
+from component_importer.gui_interactive_editor import InteractivePinLayoutDialog
+from component_importer.interactive_strategy import build_state_from_symbol
+from component_importer.interactive_strategy import layout_from_state
+from component_importer.interactive_strategy import PredeterminedLayoutStrategy
 
 # Import app path helpers
 from component_importer.app_paths import APP_NAME
 from component_importer.app_paths import runtime_icon_path
+
+# Import Qt-free overwrite pre-check shared with the CLI
+from component_importer.cad_zip_importer import check_existing_component
 
 # Import library initializer
 from component_importer.project_library_initializer import initialize_project_libraries
@@ -173,6 +186,9 @@ class MainWindow(QMainWindow):
         self.search_tab.logMessage.connect(self.log)
         self.import_tab.logMessage.connect(self.log)
         self.import_tab.importRequested.connect(self.start_import)
+        self.import_tab.interactivePinLayoutChanged.connect(
+            self.on_interactive_pin_layout_changed
+        )
         self.current_tab_index = self.tabs.currentIndex()
         self.tabs.currentChanged.connect(self.on_current_tab_changed)
 
@@ -416,6 +432,109 @@ class MainWindow(QMainWindow):
 
         self.on_config_saved(config, show_log=show_log)
 
+    # Persist the interactive pin-layout option like any other config field
+    def on_interactive_pin_layout_changed(self, enabled: bool) -> None:
+        if self.config.interactive_pin_layout == enabled:
+            return
+
+        # Update the shared config and mirror it onto the tabs that cache it
+        self.config = replace(self.config, interactive_pin_layout=enabled)
+        self.config_tab.config = self.config
+        self.symbol_style_tab.config = self.config
+        self.import_tab.config = self.config
+
+        try:
+            save_gui_config(self.config)
+        except Exception as error:
+            self.log(f"Configuration save error: {error}")
+
+    # Decide how a manual import should treat a component that already exists.
+    #
+    # Returns a (proceed, overwrite) pair:
+    #   (True, False)  the part is new (or the check failed): import normally
+    #   (True, True)   the user confirmed Overwrite: import with skip disabled
+    #   (False, False) the user cancelled: abort without starting a worker
+    #
+    # The existence check and message are produced by the Qt-free shared helper
+    # so the CLI and GUI stay in lockstep. Only the modal itself is Qt.
+    def resolve_overwrite_decision(self, zip_path: str, part_name: str):
+        try:
+            existing = check_existing_component(
+                zip_path=zip_path,
+                project_root=self.config.project_root,
+                library_name=self.config.library_name,
+                part_name=part_name,
+            )
+        except Exception as error:
+            # A failed pre-check must not block the import; the worker will
+            # surface any real problem with the ZIP itself.
+            self.log(f"Overwrite check skipped: {error}")
+            return True, False
+
+        if not existing.get("already_exists", False):
+            return True, False
+
+        if not self.confirm_overwrite_dialog(existing["message"]):
+            self.log(f"Import cancelled: {part_name} already in library.")
+            return False, False
+
+        return True, True
+
+    # Show the modal overwrite confirmation and return True to overwrite.
+    #
+    # Cancel is the default button. The "Overwrite" button is the standard Ok
+    # button relabeled, so exec() returns a StandardButton value that tests can
+    # monkeypatch without inspecting the concrete button object.
+    def confirm_overwrite_dialog(self, message: str) -> bool:
+        box = QMessageBox(self)
+        box.setWindowTitle("Component already exists")
+        box.setWindowIcon(self.app_icon)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setText(message)
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok
+        )
+        box.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+
+        return box.exec() == QMessageBox.StandardButton.Ok
+
+    # Run the interactive pin-layout editor on the GUI thread and return a
+    # predetermined-layout strategy, or None to import without reconstruction.
+    #
+    # This must run on the GUI thread (modal dialog) and returns a thread-safe,
+    # UI-free strategy the import worker can apply off-thread. Cancelling the
+    # dialog mirrors the TUI: no reconstruction, the normal import continues.
+    def resolve_interactive_strategy(self, zip_path: str, part_name: str):
+        if not self.config.interactive_pin_layout:
+            return None
+
+        extracted = extract_symbol_block_from_zip(zip_path, part_name)
+
+        if extracted is None:
+            self.log("Interactive layout skipped: no symbol found in ZIP.")
+            return None
+
+        symbol_name, block_text = extracted
+        state = build_state_from_symbol(block_text)
+
+        # Nothing to arrange when the symbol carries no recognizable pins
+        if not any(state.sides[side] for side in state.sides):
+            self.log("Interactive layout skipped: symbol has no pins.")
+            return None
+
+        dialog = InteractivePinLayoutDialog(state, symbol_name, self)
+        result = dialog.exec()
+
+        if result != int(dialog.DialogCode.Accepted):
+            self.log("Interactive layout cancelled; importing without changes.")
+            return None
+
+        layout = layout_from_state(dialog.state)
+        self.log(f"Interactive layout accepted for {symbol_name}.")
+
+        return PredeterminedLayoutStrategy({symbol_name: layout})
+
     # Handle detected ZIP
     def on_zip_detected(self, zip_path: str) -> None:
         # Infer part name
@@ -458,6 +577,31 @@ class MainWindow(QMainWindow):
             self.log(f"Import busy. Queued: {part_name}")
             return
 
+        # Overwrite confirmation and interactive pin layout are both manual-only.
+        # Background auto-import stays silent: it never opens a modal and never
+        # reconstructs pins, keeping today's skip-existing behavior. This is the
+        # explicit code-path split that guarantees auto-import is non-interactive.
+        skip_existing_components = True
+        formatting_strategy = None
+
+        if not auto_import:
+            # Ask about overwriting an existing part before doing anything else.
+            proceed, overwrite = self.resolve_overwrite_decision(
+                zip_path, part_name
+            )
+
+            # Cancel aborts the whole import: no worker is started.
+            if not proceed:
+                return
+
+            if overwrite:
+                skip_existing_components = False
+
+            # The interactive editor only runs after the overwrite choice.
+            formatting_strategy = self.resolve_interactive_strategy(
+                zip_path, part_name
+            )
+
         # Mark busy
         self.import_busy = True
 
@@ -466,7 +610,13 @@ class MainWindow(QMainWindow):
 
         # Create thread and worker
         thread = QThread(self)
-        worker = ImportComponentWorker(zip_path, part_name, self.config)
+        worker = ImportComponentWorker(
+            zip_path,
+            part_name,
+            self.config,
+            formatting_strategy=formatting_strategy,
+            skip_existing_components=skip_existing_components,
+        )
 
         # Move worker to thread
         worker.moveToThread(thread)

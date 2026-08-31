@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QPushButton
 from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtWidgets import QListWidget
 from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QCheckBox
 
 # Import signals, filesystem watcher, and timers
 from PyQt6.QtCore import QFileSystemWatcher
@@ -32,6 +33,9 @@ class ImportTab(QWidget):
     # Log signal
     logMessage = pyqtSignal(str)
 
+    # Emitted when the interactive pin-layout option is toggled
+    interactivePinLayoutChanged = pyqtSignal(bool)
+
     # Create tab
     def __init__(self, config):
         # Initialize QWidget
@@ -54,6 +58,14 @@ class ImportTab(QWidget):
     def update_config(self, config) -> None:
         # Store config
         self.config = config
+
+        # Keep the interactive option in sync without re-emitting the change
+        if hasattr(self, "interactive_checkbox"):
+            self.interactive_checkbox.blockSignals(True)
+            self.interactive_checkbox.setChecked(
+                bool(getattr(config, "interactive_pin_layout", False))
+            )
+            self.interactive_checkbox.blockSignals(False)
 
         # Rewatch the configured folder and refresh without noisy log output
         self.configure_downloads_watcher()
@@ -123,7 +135,18 @@ class ImportTab(QWidget):
         button_row = QHBoxLayout()
         self.import_button = QPushButton("Import ZIP")
 
+        # Optional interactive pin-layout editor before importing
+        self.interactive_checkbox = QCheckBox("Interactive pin layout")
+        self.interactive_checkbox.setToolTip(
+            "Open a keyboard-driven editor to rearrange the symbol's pins "
+            "across all four sides before importing."
+        )
+        self.interactive_checkbox.setChecked(
+            bool(getattr(self.config, "interactive_pin_layout", False))
+        )
+
         button_row.addWidget(self.import_button)
+        button_row.addWidget(self.interactive_checkbox)
         button_row.addStretch()
 
         # ZIP list
@@ -140,6 +163,9 @@ class ImportTab(QWidget):
         self.zip_path_button.clicked.connect(self.browse_zip)
         self.import_button.clicked.connect(self.request_import)
         self.downloads_list.currentRowChanged.connect(self.select_zip_from_row)
+        self.interactive_checkbox.toggled.connect(
+            self.interactivePinLayoutChanged.emit
+        )
 
     # Browse ZIP file
     def browse_zip(self) -> None:
